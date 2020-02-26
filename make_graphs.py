@@ -36,18 +36,23 @@ for l in league_names:
 print(len(player_scores), "rgl players found")
 
 league_player_counts = []
-plt.hist(scores, bins=list(range(50)))
-plt.axvline(x=18.5)
-plt.axvline(x=21.7)
-plt.axvline(x=23.7)
-plt.axvline(x=25.8)
-plt.axvline(x=28.8)
-plt.savefig("score_hist.png")
+fig, axs = plt.subplots()
+axs.hist(scores, bins=list(range(50)))
+axs.axvline(x=18.5)
+axs.axvline(x=21.7)
+axs.axvline(x=23.7)
+axs.axvline(x=25.8)
+axs.axvline(x=28.8)
+axs.set_ylabel("count")
+axs.set_xlabel("TrueSkill MMR")
+axs.set_title("RGL.GG Player MMR")
+fig.savefig("score_hist.png")
 
-plt.figure()
-plt.boxplot(boxplot_data, vert=False)
-plt.savefig("score_boxplot.png")
-# for s in steam_ids:
-#     sid = SteamID(s)
-#     print(sid.as_64)
+fig, axs = plt.subplots()
+axs.boxplot(boxplot_data, vert=False)
+axs.set_yticklabels(league_names)
+axs.set_xlabel("TrueSkill MMR")
+axs.set_title("RGL.GG Division MMR")
+fig.savefig("score_boxplot.png")
+
 
