@@ -2,6 +2,7 @@
 
 import trueskill
 import json
+from steam.steamid import SteamID
 
 games = []
 player_ratings = {}
@@ -50,6 +51,10 @@ for game in games:
     for pid, rank in zip(blue_ids, new_blue_ratings):
         player_ratings[pid] = rank
 
-with open("player_scores.json", "a") as f:
+with open("player_scores.json", "w", encoding="utf-8") as f:
     for pid, rating in player_ratings.items(): 
-        f.write(json.dumps({"steamid3":pid, "mu": rating.mu}) + "\n")
+        f.write(json.dumps({"steamid3":SteamID(pid).as_64, "mu": rating.mu}) + "\n")
+
+with open("player_scores.csv", "w", encoding="utf-8") as f:
+    for pid, rating in player_ratings.items():
+        f.write("{},{}\n".format(SteamID(pid).as_64, rating.mu) )
