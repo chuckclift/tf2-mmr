@@ -4,20 +4,21 @@ from urllib import request
 from urllib.error import URLError 
 from pathlib import Path
 from datetime import datetime, timedelta
-import itertools
 import time
 import json
 import re
-import random
+from steam.steamid import SteamID
 
 details_url = "http://logs.tf/json/"
 SLEEP_TIME = 10
-SEASON = datetime.now() - timedelta(days=30)
-COMP_MAPS = {"cp_snakewater_final1", "pl_upward", "pl_vigil_rc7", 
-             "cp_metalworks", "cp_sunshine", "koth_ashville_rc1_nb2", 
-             "cp_process_final", "th_ashville_rc1_nb2", 
-             "koth_ashville_rc1_nb4", "koth_product_rcx", 
-             "cp_gullywash_final1", "pl_borneo", "koth_clearcut_b14c"}
+SEASON = datetime.now() - timedelta(days=60)
+
+comp_maps = set()
+with open("comp_maps.txt", encoding="utf-8") as f:
+    for line in f:
+        if not line:
+            continue
+        comp_maps.add(line.strip())
 
 player_ids = set()
 with open("player_links.txt") as f:
@@ -25,19 +26,35 @@ with open("player_links.txt") as f:
         m = re.search(r"\d{10,}", line)
         player_ids.add(int(m.group(0)))
 
-shuffled_ids = list(player_ids)
-random.shuffle(shuffled_ids)
-        
+
+player_count = {}
+with open("game_logs.json", encoding="utf-8") as f:
+    for line in f:
+        d = json.loads(line)
+        for player in d["players"]:
+            id64 = SteamID(player).as_64
+            if id64 not in player_ids:
+                pass
+            elif id64 in player_count:
+                player_count[id64] += 1
+            else:
+                player_count[id64] = 1
+
+# the list is sorted so players with fewer games are searched for first.
+# That way, the get_game_ids function looks for their games first.
+players = sorted([(count, player) for player, count in player_count.items()])
+sorted_ids = [pid64 for _, pid64 in players]
+
 
 def get_game_ids():
-    for i, pid in enumerate(shuffled_ids):
-        id_url = "http://logs.tf/api/v1/log?limit=50&player=" + str(pid)
+    for i, pid in enumerate(sorted_ids):
+        id_url = "http://logs.tf/api/v1/log?limit=200&player=" + str(pid)
         print(i, "/", len(player_ids), "getting game ids from", id_url)
         try:
             id_request = request.urlopen(id_url, timeout=10)
             game_search = json.loads(id_request.read().decode("utf-8"))
             for game in game_search["logs"]:
-                if game["map"] in COMP_MAPS and game["date"] >= SEASON.timestamp():
+                if game["map"] in comp_maps and game["date"] >= SEASON.timestamp():
                     yield game["id"]
             time.sleep(SLEEP_TIME)
         except URLError as e:
