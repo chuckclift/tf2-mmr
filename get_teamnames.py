@@ -11,7 +11,7 @@ with open("league_table.html", encoding="utf-8") as f:
 
     for l in team_links:
         link = l.get("href")
-        teamid = re.search(r"(t=)([0-9]+)", link).group(2)
+        teamid = re.search(r"(t=)(?P<teamid>[0-9]+)", link).group("teamid")
 
         with open("team_names.csv", "a", encoding="utf-8") as g:
             g.write(teamid + "," + l.text.strip() + "\n")
