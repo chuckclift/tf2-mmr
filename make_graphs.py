@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 from steam.steamid import SteamID
 
-league_names = ["invite", "advanced", "main", "intermediate", "open", "newcomer"]
+league_names = ["invite", "advanced", "main", "intermediate", "open", "newcomer"][::-1]
 player_leagues = {}
 with open("player_teamid_league.csv", encoding="utf-8") as f:
     for line in f:
@@ -53,6 +53,7 @@ axs.boxplot(boxplot_data, vert=False)
 axs.set_yticklabels(league_names)
 axs.set_xlabel("TrueSkill MMR")
 axs.set_title("RGL.GG Division MMR")
+fig.tight_layout()
 fig.savefig("score_boxplot.png")
 
 
