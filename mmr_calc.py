@@ -20,7 +20,7 @@ for game in games:
     red_ids = [i for i in game["players"]
                if game["players"][i]["team"] == "Red"]
     blue_ids = [i for i in game["players"]
-               if game["players"][i]["team"] == "Blue"]
+                if game["players"][i]["team"] == "Blue"]
     
     red_ratings = [player_ratings[i] for i in red_ids]
     blue_ratings = [player_ratings[i] for i in blue_ids] 
@@ -51,10 +51,9 @@ for game in games:
     for pid, rank in zip(blue_ids, new_blue_ratings):
         player_ratings[pid] = rank
 
-with open("player_scores.json", "w", encoding="utf-8") as f:
-    for pid, rating in player_ratings.items(): 
-        f.write(json.dumps({"steamid3":SteamID(pid).as_64, "mu": rating.mu}) + "\n")
-
 with open("player_scores.csv", "w", encoding="utf-8") as f:
     for pid, rating in player_ratings.items():
-        f.write("{},{}\n".format(SteamID(pid).as_64, rating.mu) )
+        f.write("{},{}\n".format(SteamID(pid).as_64, rating.mu))
+
+
+
