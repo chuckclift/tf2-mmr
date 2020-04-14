@@ -23,7 +23,7 @@ with open("comp_maps.txt", encoding="utf-8") as f:
 
 
 def get_game_ids():
-    id_url = "https://logs.tf/api/v1/log"
+    id_url = "https://logs.tf/api/v1/log?limit=2000"
     try:
         id_request = request.urlopen(id_url, timeout=10)
         game_search = json.loads(id_request.read().decode("utf-8"))
@@ -37,17 +37,6 @@ def get_game_ids():
         time.sleep(60 * 5)
 
 
-downloaded_games = set()
-if not Path("game_logs.json").is_file():
-    with open("game_logs.json", "w+") as f:
-        print("created game_logs.json")
-else:
-    with open("game_logs.json", "r", encoding="utf-8") as f:
-        for line in f:
-            game_id = json.loads(line)["id"]
-            downloaded_games.add(game_id)
-        print("found", len(downloaded_games), "in game_logs.json")
-
 usernames = {}
 if not Path("usernames.csv").is_file():
     with open("usernames.csv", "w+") as f:
@@ -55,10 +44,31 @@ if not Path("usernames.csv").is_file():
 else:
     with open("usernames.csv", encoding="utf-8") as f:
         for line in f:
-            if not line:
+            if not line.strip():
                 continue
             steam_id, name = line.split(",")
             usernames[int(steam_id)] = name
+
+
+downloaded_games = set()
+if not Path("game_logs.json").is_file():
+    with open("game_logs.json", "w+") as f:
+        print("created game_logs.json")
+else:
+    with open("game_logs.json", "r", encoding="utf-8") as f:
+        for line in f:
+            game = json.loads(line)
+            game_id = ["id"]
+            downloaded_games.add(game["id"])
+            for steamid3, username in game["names"].items():
+                stripped_username = " ".join(username.split())
+                clean_username = stripped_username.replace("<", "").replace(">", "").replace(",", "")
+                usernames[SteamID(steamid3).as_64] = clean_username
+
+
+print("found", len(downloaded_games), "games in game_logs.json")
+print("found", len(usernames), "users in game_logs.json")
+
 
 for gid in get_game_ids():
     if gid in downloaded_games:
@@ -73,7 +83,8 @@ for gid in get_game_ids():
         game_details["id"] = gid
 
         for steamid3, username in game_details["names"].items():
-            clean_username = username.replace("<", "").replace(">", "").replace(",", "")
+            stripped_username = " ".join(username.split())
+            clean_username = stripped_username.replace("<", "").replace(">", "").replace(",", "")
             usernames[SteamID(steamid3).as_64] = clean_username
 
         with open("game_logs.json", "a", encoding="utf-8") as games_file:
