@@ -21,7 +21,7 @@ with open("game_logs.json") as game_logs:
 
         game_time = g["info"]["total_length"]
         rounds = len(g["rounds"])
-        # print(game_time / 60, "minutes long", rounds, "rounds played")
+
         for id3, d in g["players"].items():
             id64 = SteamID(id3).as_64
             if id64 not in player_stats:
@@ -37,7 +37,8 @@ with open("game_logs.json") as game_logs:
 
 
 print("<html><head><title>Player Stats</title></head>")
-print("<body style='background-color:#4d4d4d;'>")
+print("<body style='background-color:#4d4d4d; margin:0px;'>")
+print("<nav style='background-color:#595959;'> &nbsp; &nbsp; <a  style='font-size:36px; color:white;' href='/team_report.html'>Team Reports</a></nav>")
 
 for id64, stats in player_stats.items():
     minutes = stats["time"] / 60
@@ -59,11 +60,9 @@ for id64, stats in player_stats.items():
     print("<p>(DA/M) - (DT/M) :", round(dpm - dtpm, 2), "</p>")
     print("<p>Kills / M : ", round(stats["kills"] / minutes, 2), "</p>")
     print("<p>Heal / M : ", round(stats["heal"] / minutes, 2), "</p>")
+    print("<p>Deaths / M : ", round(stats["deaths"] / minutes, 2), "</p>")
     print("<p>Drops / M : ", round(stats["drops"] / minutes, 2), "</p>")
-
-
-
-
+    print("<p>Drops / Round : ", round(stats["drops"] / stats["rounds"], 2), "</p>")
     print("</div>")
 
 print("</body")
