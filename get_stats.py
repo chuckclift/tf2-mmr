@@ -46,7 +46,9 @@ with open("game_logs.json") as game_logs:
                 safe_add(stats[id64][c["type"]], "deaths", c["deaths"])
                 safe_add(stats[id64][c["type"]], "dmg", c["dmg"])
                 safe_add(stats[id64][c["type"]], "total_time", c["total_time"])
-                safe_add(stats[id64][c["type"]], "heal", d["heal"])
+
+                estimated_heal = d["heal"] * c["total_time"] / game_time
+                safe_add(stats[id64][c["type"]], "heal", estimated_heal)
 
                 estimated_dt = d["dt"] * c["total_time"] / game_time
                 safe_add(stats[id64][c["type"]], "dt",  estimated_dt)
@@ -71,12 +73,15 @@ nav {
     background-color:#595959;
 }
 td {
-    width: 80px; 
+    width: 120px; 
+}
+th {
+    text-align:left;
 }
 </style>
 """
 
-print("<html><head><title>Player Stats</title></head>")
+print("<html><head><title>Player Stats</title><link rel='icon' type='image/png' href='/favicon.ico'></head>")
 print(style)
 print("<body>")
 print("<nav> &nbsp; &nbsp; <a  style='font-size:36px; color:white;' href='/team_report.html'>Team Reports</a></nav>")
@@ -93,8 +98,8 @@ for id64, s in stats.items():
           "<th> KA / D </th>" +
           "<th> DA / M </th>" +
           "<th> DT / M </th>" +
-          "<th> DA / M - DT / M </th>" +
-          "<th> Heal / M </th>" +
+          "<th> DaS </th>" +
+          # "<th> Heal / M </th>" +
           "</tr>")
     for classname, class_stats in s.items():
         M = class_stats["total_time"] / 60
@@ -110,7 +115,7 @@ for id64, s in stats.items():
 
         ka_per_d = float("nan") 
         if class_stats["deaths"] > 0:
-            ka_per_d = (class_stats["kills"] + class_stats["assists"] / 
+            ka_per_d = ( (class_stats["kills"] + class_stats["assists"] ) / 
                         class_stats["deaths"])
         damage_surplus = class_stats["dmg"] / M - class_stats["dt"] / M
         row_str = ("<tr>" + 
@@ -122,10 +127,10 @@ for id64, s in stats.items():
                   "<td>{:.2f}</td>".format(class_stats["dmg"] / M ) +
                   "<td>{:.2f}</td>".format(class_stats["dt"] / M ) +
                   "<td>{:.2f}</td>".format( damage_surplus ) +
-                  "<td>{:.2f}</td>".format( class_stats["heal"] / M ) +
                   "</tr>" )
         print(row_str)
         
+
 
     print("</table>")
     print("</div>")
@@ -133,5 +138,12 @@ for id64, s in stats.items():
 
 
 
+print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>><h1>Glossary</h1>")
+print("<h2>K / M : Kills per Minute</h2>")
+print("<h2>D / M : Deaths per Minute</h2>")
+print("<h2>KA / D : Kills and assists per death</h2>")
+print("<h2>DA / M : Damage per Minute</h2>")
+print("<h2>DT / M : Damage taken  per Minute</h2>")
+print("<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>")
 
 print("</body")
