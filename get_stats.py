@@ -2,7 +2,7 @@
 
 import json
 from steam.steamid import SteamID
-from pprint import pprint
+import datetime
 from typing import Dict
 
 stats = {} # type: Dict[int, Dict]
@@ -17,9 +17,23 @@ def safe_add(dct, k, v):
     else:
         dct[k] = v
 
+newest_log = None
+oldest_log = None
 with open("game_logs.json") as game_logs:
     for line in game_logs:
         g = json.loads(line)
+        upload_date = datetime.datetime.fromtimestamp(g["info"]["date"])
+        if not newest_log:
+            newest_log = upload_date
+        else:
+            newest_log = max(newest_log, upload_date)
+
+        if not oldest_log:
+            oldest_log = upload_date
+        else:
+            oldest_log = min(oldest_log, upload_date)
+
+
 
         # getting usernames
         for id3, name in g["names"].items():
@@ -81,9 +95,12 @@ th {
 </style>
 """
 
-print("<html><head><title>Player Stats</title><link rel='icon' type='image/png' href='/favicon.ico'></head>")
+print("<html><head>")
+print('<meta charset="UTF-8">')
+print("<title>Player Stats</title>")
+print("<link rel='icon' type='image/png' href='/favicon.ico'>")
 print(style)
-print("<body>")
+print("</head><body>")
 print("<nav> &nbsp; &nbsp; <a  style='font-size:36px; color:white;' href='/team_report.html'>Team Reports</a></nav>")
 
 for id64, s in stats.items():
@@ -99,9 +116,9 @@ for id64, s in stats.items():
           "<th> DA / M </th>" +
           "<th> DT / M </th>" +
           "<th> DaS </th>" +
-          # "<th> Heal / M </th>" +
+          "<th> Hours </th>" +
           "</tr>")
-    for classname, class_stats in s.items():
+    for classname, class_stats in sorted(s.items(), key=lambda x: x[1]["total_time"], reverse=True):
         M = class_stats["total_time"] / 60
         if M < 1:
             # ignore classes with under 1 minute of playtime
@@ -127,6 +144,7 @@ for id64, s in stats.items():
                   "<td>{:.2f}</td>".format(class_stats["dmg"] / M ) +
                   "<td>{:.2f}</td>".format(class_stats["dt"] / M ) +
                   "<td>{:.2f}</td>".format( damage_surplus ) +
+                  "<td>{:.2f}</td>".format( M / 60 ) +
                   "</tr>" )
         print(row_str)
         
@@ -145,5 +163,5 @@ print("<h2>KA / D : Kills and assists per death</h2>")
 print("<h2>DA / M : Damage per Minute</h2>")
 print("<h2>DT / M : Damage taken  per Minute</h2>")
 print("<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>")
-
-print("</body")
+print("<p>all stats calculated from logs between {0:%D %T} and {1:%D %T}</p>".format(oldest_log, newest_log))
+print("</body>")
