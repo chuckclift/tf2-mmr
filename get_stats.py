@@ -1,23 +1,33 @@
 #!/usr/bin/env python3
+"""
+This script parses data from the game_logs.json file and uses it to generate
+an html report showing player statistics.
+"""
 
 import json
 import datetime
 from typing import Dict
 from steam.steamid import SteamID
 
-player_mmr = {} # type: Dict[int, float]
+player_mmr = {}  # type: Dict[int, float]
 stats = {}  # type: Dict[int, Dict]
 player_names = {}  # type: Dict[int, str]
 classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
               "engineer", "demoman", "heavyweapons"]
 
 
-def safe_add(dct, k, v):
-    if k in dct:
-        dct[k] += v
+def safe_add(dct, key, value):
+    """
+    adds the given value to the key's value in the dictionary.
+    If the key is not present in the dictionary, the value
+    is set to the supplied value.
+    """
+    if key in dct:
+        dct[key] += value
 
     else:
-        dct[k] = v
+        dct[key] = value
+
 
 with open("player_scores.csv", encoding="utf-8") as f:
     for line in f:
@@ -26,9 +36,10 @@ with open("player_scores.csv", encoding="utf-8") as f:
         id_field, mmr_field = line.split(",")
         player_mmr[int(id_field)] = float(mmr_field)
 
-newest_log = None
-oldest_log = None
-games_played = 0
+newest_log = None # pylint: disable=C0103
+oldest_log = None # pylint: disable=C0103
+games_played = 0 # pylint: disable=C0103
+
 with open("game_logs.json") as game_logs:
     for line in game_logs:
         games_played += 1
@@ -46,17 +57,13 @@ with open("game_logs.json") as game_logs:
 
         # getting usernames
         for id3, name in g["names"].items():
-            id64 = SteamID(id3).as_64
-            normalized_name = " ".join(name.split())
-            cleaned_name = normalized_name.replace(
-                "<", "&lt;").replace(">", "&gt;")
-            player_names[id64] = cleaned_name
+            player_names[SteamID(id3).as_64] = " ".join(
+                name.split()).replace("<", "&lt;").replace(">", "&gt;")
 
         game_time = g["info"]["total_length"]
-        rounds = len(g["rounds"])
 
         for id3, d in g["players"].items():
-            id64 = SteamID(id3).as_64
+            id64 = SteamID(id3).as_64 # pylint: disable=C0103
             if id64 not in stats:
                 stats[id64] = {}
 
@@ -98,7 +105,7 @@ print("""
         margin:0px;
     }
     td {
-        width: 120px; 
+        width: 120px;
     }
     th {
         text-align:left;
@@ -107,11 +114,11 @@ print("""
 </head>
 <body>
 <nav style='background-color:#595959;'>
-&nbsp; &nbsp; 
+&nbsp; &nbsp;
 <a  style='font-size:36px; color:white;' href='/team_report.html'>
     Team Reports
 </a> &nbsp; &nbsp;
-<a  style='font-size:36px; color:white;' href='/player_report.html'>
+<a  style='font-size:36px; color:white;' href='/'>
     Player Reports
 </a>
 </nav>
@@ -139,11 +146,8 @@ for id64, s in stats.items():
             # ignore classes with under 1 minute of playtime
             continue
 
-        if classname == "undefined":
+        if classname not in classnames:
             continue
-
-        dpm = round(class_stats["dmg"] / M, 2)
-        dtpm = round(class_stats["dt"] / M, 2)
 
         ka_per_d = float("nan")
         if class_stats["deaths"] > 0:
@@ -174,9 +178,11 @@ print("""
 <h2>KA / D : Kills and assists per death</h2>
 <h2>DA / M : Damage per Minute</h2>
 <h2>DT / M : Damage taken  per Minute</h2>
-<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>""")
-
-print("<p>log data from {0:%D %T} to {1:%D %T}</p>".format(oldest_log, newest_log))
-print("<p>{} players found</p>".format(len(stats)))
-print("<p>{} games analyzed</p>".format(games_played))
-print("</div></body></html>")
+<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>
+<p>log data from {oldest} to {newest}</p>
+<p>{players} players found</p>
+<p>{games} games analyzed</p>
+</div>
+""".format(oldest=oldest_log, newest=newest_log, players=len(stats),
+           games=games_played))
+print("</body></html>")

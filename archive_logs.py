@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+This script downloads the most recent game logs from logs.tf and stores them
+in game_logs.json.  It avoids archiving "casual" maps, only downloading
+logs for competive maps.
+"""
 
 from urllib import request
 from urllib.error import URLError
@@ -6,9 +11,9 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import time
 import json
-from steam.steamid import SteamID
+from typing import Set
+from steam.steamid import SteamID # type: ignore
 
-details_url = "https://logs.tf/json/"
 SLEEP_TIME = 3
 SEASON = datetime.now() - timedelta(days=60)
 
@@ -21,13 +26,18 @@ with open("comp_maps.txt", encoding="utf-8") as f:
 
 
 def get_game_ids():
+    """
+    lazily yields game ids of the most recent logs.tf games.
+    This function filters out games with casual maps, using
+    a competitive map whitelist.
+    """
     id_url = "https://logs.tf/api/v1/log?limit=2000"
     try:
         id_request = request.urlopen(id_url, timeout=10)
         game_search = json.loads(id_request.read().decode("utf-8"))
-        for game in game_search["logs"]:
-            if game["map"] in comp_maps and game["date"] >= SEASON.timestamp():
-                yield game["id"]
+        for game_log in game_search["logs"]:
+            if game_log["map"] in comp_maps and game_log["date"] >= SEASON.timestamp():
+                yield game_log["id"]
         time.sleep(SLEEP_TIME)
     except URLError as e:
         print(e)
@@ -48,7 +58,7 @@ else:
             usernames[int(steam_id)] = name
 
 
-downloaded_games = set()
+downloaded_games = set()  # type: Set[int]
 if not Path("game_logs.json").is_file():
     with open("game_logs.json", "w+") as f:
         print("created game_logs.json")
@@ -56,14 +66,10 @@ else:
     with open("game_logs.json", "r", encoding="utf-8") as f:
         for line in f:
             game = json.loads(line)
-            game_id = ["id"]
             downloaded_games.add(game["id"])
             for steamid3, username in game["names"].items():
-                stripped_username = " ".join(username.split())
-                clean_username = stripped_username.replace(
-                    "<", "").replace(">", "").replace(",", "")
-                usernames[SteamID(steamid3).as_64] = clean_username
-
+                usernames[SteamID(steamid3).as_64] = " ".join(
+                    username.split()).replace("<", "").replace(">", "").replace(",", "")
 
 print("found", len(downloaded_games), "games in game_logs.json")
 print("found", len(usernames), "users in game_logs.json")
@@ -73,26 +79,25 @@ for gid in get_game_ids():
     if gid in downloaded_games:
         print(gid, "already downloaded")
         continue
-    request_url = details_url + str(gid)
-    print(request_url)
+
+    print("https://logs.tf/json/" + str(gid))
     try:
-        details_request = request.urlopen(request_url, timeout=10)
+        details_request = request.urlopen(
+            "https://logs.tf/json/" + str(gid), timeout=10)
         game_details = json.loads(details_request.read().decode("utf-8"))
         del game_details["chat"]
         game_details["id"] = gid
 
         for steamid3, username in game_details["names"].items():
-            stripped_username = " ".join(username.split())
-            clean_username = stripped_username.replace(
-                "<", "").replace(">", "").replace(",", "")
-            usernames[SteamID(steamid3).as_64] = clean_username
+            usernames[SteamID(steamid3).as_64] = " ".join(
+                username.split()).replace("<", "").replace(">", "").replace(",", "")
 
         with open("game_logs.json", "a", encoding="utf-8") as games_file:
             games_file.write(json.dumps(game_details) + "\n")
 
     except URLError as e:
         print(e)
-        print("error processing", request_url, "sleeping 5 mins.")
+        print("error processing https://logs.tf/json/{} sleeping 5 mins.".format(gid))
         time.sleep(60 * 5)
 
     time.sleep(SLEEP_TIME)

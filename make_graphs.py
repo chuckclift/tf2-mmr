@@ -34,7 +34,6 @@ for l in league_names:
 
 print(len(player_scores), "rgl players found")
 
-league_player_counts = []
 fig, axs = plt.subplots()
 axs.hist(scores, bins=list(range(50)))
 axs.axvline(x=18.5)

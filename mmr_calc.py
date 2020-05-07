@@ -1,38 +1,45 @@
 #!/usr/bin/env python3
+"""
+This script calculates the mmr of players in the game_logs.json file using
+the trueskill ranking algorithm.  It stores the results in player_scores.csv.
+"""
 
 import json
-import trueskill
-from steam.steamid import SteamID
+from typing import Dict, Iterator, List, Tuple, Any
+import trueskill # type: ignore
+from steam.steamid import SteamID # type: ignore
 
 
-player_ratings = {}
-log_index = []
+player_ratings = {} # type: Dict[int, Any]
 
 
-with open("game_logs.json", encoding="utf-8") as f:
-    start = 0
-    while True:
-        gdata = f.readline()
+def get_sorted_games():  # type: () -> Iterator[Dict]
+    """
+    This function yields game logs one at a time, sorted by their upload
+    time
+    """
 
-        # if the end of file has been reached, an empty string is returned
-        if gdata == "":
-            break
+    log_index = []  # type: List[Tuple[int, int]]
+    with open("game_logs.json", encoding="utf-8") as game_log:
+        start = 0  # pylint: disable=C0103
+        while True:
+            gdata = game_log.readline()
 
-        game_data = json.loads(gdata)
-        log_index.append((game_data["info"]["date"], start))
-        start = f.tell()
+            # if the end of file has been reached, an empty string is returned
+            if gdata == "":
+                break
 
-    log_index.sort()
+            game_data = json.loads(gdata)
+            log_index.append((game_data["info"]["date"], start))
+            start = game_log.tell()
+
+        log_index.sort()
+        for _, location in log_index:
+            game_log.seek(location)
+            yield json.loads(game_log.readline())
 
 
-def get_games():
-    with open("game_logs.json", encoding="utf-8") as f:
-        for _, l in log_index:
-            f.seek(l)
-            yield json.loads(f.readline())
-
-
-for game in get_games():
+for game in get_sorted_games():
     # creating ratings for new players
     for player_id in game["players"]:
         if player_id not in player_ratings:
