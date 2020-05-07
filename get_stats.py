@@ -121,7 +121,7 @@ for id64, s in stats.items():
     print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>")
     print("<h1>", player_names[id64], id64, "</h1>")
     mmr = float("nan") if id64 not in player_mmr else player_mmr[id64] 
-    print("<p><span style='font-weight:bold;'>mmr</span>{:.2f}</p>".format(mmr))
+    print("<p><b>mmr</b> : {:.2f}</p>".format(mmr))
 
     print("<table>")
     print("<tr>" +
