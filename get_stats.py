@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import json
-from steam.steamid import SteamID
 import datetime
 from typing import Dict
+from steam.steamid import SteamID
 
 stats = {}  # type: Dict[int, Dict]
 player_names = {}  # type: Dict[int, str]
@@ -57,7 +57,7 @@ with open("game_logs.json") as game_logs:
                 if c["type"] not in stats[id64]:
                     stats[id64][c["type"]] = {}
 
-                safe_add(stats[id64][c["type"]], "kills",  c["kills"])
+                safe_add(stats[id64][c["type"]], "kills", c["kills"])
                 safe_add(stats[id64][c["type"]], "assists", c["assists"])
                 safe_add(stats[id64][c["type"]], "deaths", c["deaths"])
                 safe_add(stats[id64][c["type"]], "dmg", c["dmg"])
@@ -67,7 +67,7 @@ with open("game_logs.json") as game_logs:
                 safe_add(stats[id64][c["type"]], "heal", estimated_heal)
 
                 estimated_dt = d["dt"] * c["total_time"] / game_time
-                safe_add(stats[id64][c["type"]], "dt",  estimated_dt)
+                safe_add(stats[id64][c["type"]], "dt", estimated_dt)
 
                 if c["type"] == "medic":
                     safe_add(stats[id64]["medic"], "drops", d["drops"])
@@ -76,34 +76,40 @@ with open("game_logs.json") as game_logs:
                     safe_add(stats[id64]["sniper"],
                              "headshots_hit", d["headshots_hit"])
                 elif c["type"] == "spy":
-                    safe_add(stats[id64]["spy"], "backstabs",  d["backstabs"])
+                    safe_add(stats[id64]["spy"], "backstabs", d["backstabs"])
 
 
-style = """
-<style>
-body {
-    background-color:#4d4d4d;
-    margin:0px;
-}
-nav {
-    background-color:#595959;
-}
-td {
-    width: 120px; 
-}
-th {
-    text-align:left;
-}
-</style>
-"""
-
-print("<html><head>")
-print('<meta charset="UTF-8">')
-print("<title>Player Stats</title>")
-print("<link rel='icon' type='image/png' href='/favicon.ico'>")
-print(style)
-print("</head><body>")
-print("<nav> &nbsp; &nbsp; <a  style='font-size:36px; color:white;' href='/team_report.html'>Team Reports</a></nav>")
+print("""
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Player Stats</title>
+    <link rel='icon' type='image/png' href='/favicon.ico'>
+    <style>
+    body {
+        background-color:#4d4d4d;
+        margin:0px;
+    }
+    nav {
+        background-color:#595959;
+    }
+    td {
+        width: 120px; 
+    }
+    th {
+        text-align:left;
+    }
+    </style>
+</head>
+<body>
+<nav>
+&nbsp; &nbsp; 
+<a  style='font-size:36px; color:white;' href='/team_report.html'>
+    Team Reports
+</a>
+</nav>
+    
+""")
 
 for id64, s in stats.items():
     print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>")
@@ -153,15 +159,17 @@ for id64, s in stats.items():
     print("</div>")
 
 
-print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'><h1>Glossary</h1>")
-print("<h2>K / M : Kills per Minute</h2>")
-print("<h2>D / M : Deaths per Minute</h2>")
-print("<h2>KA / D : Kills and assists per death</h2>")
-print("<h2>DA / M : Damage per Minute</h2>")
-print("<h2>DT / M : Damage taken  per Minute</h2>")
-print("<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>")
-print(
-    "<p>all stats calculated from logs between {0:%D %T} and {1:%D %T}</p>".format(oldest_log, newest_log))
+print("""
+<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
+<h1>Glossary</h1>
+<h2>K / M : Kills per Minute</h2>
+<h2>D / M : Deaths per Minute</h2>
+<h2>KA / D : Kills and assists per death</h2>
+<h2>DA / M : Damage per Minute</h2>
+<h2>DT / M : Damage taken  per Minute</h2>
+<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>""")
+
+print("<p>log data from {0:%D %T} to {1:%D %T}</p>".format(oldest_log, newest_log))
 print("<p>{} players found</p>".format(len(stats)))
 print("<p>{} games analyzed</p>".format(games_played))
-print("</body>")
+print("</div></body></html>")
