@@ -24,7 +24,8 @@ with open("game_logs.json", encoding="utf-8") as f:
         log_index.append( (game_data["info"]["date"], start) )
         start = f.tell()
 
-log_index.sort()
+    log_index.sort()
+
 
 def get_games():
     with open("game_logs.json", encoding="utf-8") as f:
@@ -33,8 +34,7 @@ def get_games():
             yield json.loads( f.readline() )
 
 
-
-for game in get_games(): # games:
+for game in get_games():
     # creating ratings for new players
     for player_id in game["players"]:
         if player_id not in player_ratings:
