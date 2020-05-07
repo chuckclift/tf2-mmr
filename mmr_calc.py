@@ -4,14 +4,37 @@ import trueskill
 import json
 from steam.steamid import SteamID
 
+
 games = []
 player_ratings = {}
+log_index = []
 
-with open("game_logs.json") as f:
-    games = [json.loads(line) for line in f]
-    games.sort(key=lambda g: g["info"]["date"])
 
-for game in games:
+with open("game_logs.json", encoding="utf-8") as f:
+    start = 0
+    line = True 
+    while line:
+        gdata = f.readline()
+
+        # if the end of file has been reached, an empty string is returned
+        if gdata == "":
+            break
+
+        game_data = json.loads(gdata)
+        log_index.append( (game_data["info"]["date"], start) )
+        start = f.tell()
+
+log_index.sort()
+
+def get_games():
+    with open("game_logs.json", encoding="utf-8") as f:
+        for _, l in log_index:
+            f.seek(l)
+            yield json.loads( f.readline() )
+
+
+
+for game in get_games(): # games:
     # creating ratings for new players
     for player_id in game["players"]:
         if player_id not in player_ratings:
@@ -54,6 +77,4 @@ for game in games:
 with open("player_scores.csv", "w", encoding="utf-8") as f:
     for pid, rating in player_ratings.items():
         f.write("{},{}\n".format(SteamID(pid).as_64, rating.mu))
-
-
 
