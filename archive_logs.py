@@ -6,9 +6,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import time
 import json
-import re
 from steam.steamid import SteamID
-import pickle
 
 details_url = "https://logs.tf/json/"
 SLEEP_TIME = 3
@@ -62,7 +60,8 @@ else:
             downloaded_games.add(game["id"])
             for steamid3, username in game["names"].items():
                 stripped_username = " ".join(username.split())
-                clean_username = stripped_username.replace("<", "").replace(">", "").replace(",", "")
+                clean_username = stripped_username.replace(
+                    "<", "").replace(">", "").replace(",", "")
                 usernames[SteamID(steamid3).as_64] = clean_username
 
 
@@ -84,7 +83,8 @@ for gid in get_game_ids():
 
         for steamid3, username in game_details["names"].items():
             stripped_username = " ".join(username.split())
-            clean_username = stripped_username.replace("<", "").replace(">", "").replace(",", "")
+            clean_username = stripped_username.replace(
+                "<", "").replace(">", "").replace(",", "")
             usernames[SteamID(steamid3).as_64] = clean_username
 
         with open("game_logs.json", "a", encoding="utf-8") as games_file:

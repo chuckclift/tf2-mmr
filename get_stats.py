@@ -5,10 +5,11 @@ from steam.steamid import SteamID
 import datetime
 from typing import Dict
 
-stats = {} # type: Dict[int, Dict]
-player_names = {} # type: Dict[int, str]
-classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro", 
+stats = {}  # type: Dict[int, Dict]
+player_names = {}  # type: Dict[int, str]
+classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
               "engineer", "demoman", "heavyweapons"]
+
 
 def safe_add(dct, k, v):
     if k in dct:
@@ -17,10 +18,13 @@ def safe_add(dct, k, v):
     else:
         dct[k] = v
 
+
 newest_log = None
 oldest_log = None
+games_played = 0
 with open("game_logs.json") as game_logs:
     for line in game_logs:
+        games_played += 1
         g = json.loads(line)
         upload_date = datetime.datetime.fromtimestamp(g["info"]["date"])
         if not newest_log:
@@ -33,13 +37,12 @@ with open("game_logs.json") as game_logs:
         else:
             oldest_log = min(oldest_log, upload_date)
 
-
-
         # getting usernames
         for id3, name in g["names"].items():
             id64 = SteamID(id3).as_64
-            normalized_name = " ".join( name.split())
-            cleaned_name = normalized_name.replace("<", "&lt;").replace(">", "&gt;")
+            normalized_name = " ".join(name.split())
+            cleaned_name = normalized_name.replace(
+                "<", "&lt;").replace(">", "&gt;")
             player_names[id64] = cleaned_name
 
         game_time = g["info"]["total_length"]
@@ -49,7 +52,6 @@ with open("game_logs.json") as game_logs:
             id64 = SteamID(id3).as_64
             if id64 not in stats:
                 stats[id64] = {}
-
 
             for c in d["class_stats"]:
                 if c["type"] not in stats[id64]:
@@ -67,12 +69,12 @@ with open("game_logs.json") as game_logs:
                 estimated_dt = d["dt"] * c["total_time"] / game_time
                 safe_add(stats[id64][c["type"]], "dt",  estimated_dt)
 
-
                 if c["type"] == "medic":
                     safe_add(stats[id64]["medic"], "drops", d["drops"])
-                    safe_add(stats[id64]["medic"], "ubers", d["ubers"]) 
+                    safe_add(stats[id64]["medic"], "ubers", d["ubers"])
                 elif c["type"] == "sniper":
-                    safe_add(stats[id64]["sniper"], "headshots_hit", d["headshots_hit"])
+                    safe_add(stats[id64]["sniper"],
+                             "headshots_hit", d["headshots_hit"])
                 elif c["type"] == "spy":
                     safe_add(stats[id64]["spy"], "backstabs",  d["backstabs"])
 
@@ -111,7 +113,7 @@ for id64, s in stats.items():
     print("<tr>" +
           "<th>classname</th>" +
           "<th> K / M </th>" +
-          "<th> D / M </th>" + 
+          "<th> D / M </th>" +
           "<th> KA / D </th>" +
           "<th> DA / M </th>" +
           "<th> DT / M </th>" +
@@ -125,43 +127,41 @@ for id64, s in stats.items():
             continue
 
         if classname == "undefined":
-            continue 
+            continue
 
         dpm = round(class_stats["dmg"] / M, 2)
         dtpm = round(class_stats["dt"] / M, 2)
 
-        ka_per_d = float("nan") 
+        ka_per_d = float("nan")
         if class_stats["deaths"] > 0:
-            ka_per_d = ( (class_stats["kills"] + class_stats["assists"] ) / 
+            ka_per_d = ((class_stats["kills"] + class_stats["assists"]) /
                         class_stats["deaths"])
         damage_surplus = class_stats["dmg"] / M - class_stats["dt"] / M
-        row_str = ("<tr>" + 
-                  "<td>{}</td>".format(classname) + 
-                  "<td>{:.2f}</td>".format(class_stats["kills"] / M ) +
-                  "<td>{:.2f}</td>".format(class_stats["deaths"] / M ) +
-                  "<td>{:.2f}</td>".format(ka_per_d ) +
-
-                  "<td>{:.2f}</td>".format(class_stats["dmg"] / M ) +
-                  "<td>{:.2f}</td>".format(class_stats["dt"] / M ) +
-                  "<td>{:.2f}</td>".format( damage_surplus ) +
-                  "<td>{:.2f}</td>".format( M / 60 ) +
-                  "</tr>" )
+        row_str = ("<tr>" +
+                   "<td>{}</td>".format(classname) +
+                   "<td>{:.2f}</td>".format(class_stats["kills"] / M) +
+                   "<td>{:.2f}</td>".format(class_stats["deaths"] / M) +
+                   "<td>{:.2f}</td>".format(ka_per_d) +
+                   "<td>{:.2f}</td>".format(class_stats["dmg"] / M) +
+                   "<td>{:.2f}</td>".format(class_stats["dt"] / M) +
+                   "<td>{:.2f}</td>".format(damage_surplus) +
+                   "<td>{:.2f}</td>".format(M / 60) +
+                   "</tr>")
         print(row_str)
-        
-
 
     print("</table>")
     print("</div>")
 
 
-
-
-print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>><h1>Glossary</h1>")
+print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'><h1>Glossary</h1>")
 print("<h2>K / M : Kills per Minute</h2>")
 print("<h2>D / M : Deaths per Minute</h2>")
 print("<h2>KA / D : Kills and assists per death</h2>")
 print("<h2>DA / M : Damage per Minute</h2>")
 print("<h2>DT / M : Damage taken  per Minute</h2>")
 print("<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>")
-print("<p>all stats calculated from logs between {0:%D %T} and {1:%D %T}</p>".format(oldest_log, newest_log))
+print(
+    "<p>all stats calculated from logs between {0:%D %T} and {1:%D %T}</p>".format(oldest_log, newest_log))
+print("<p>{} players found</p>".format(len(stats)))
+print("<p>{} games analyzed</p>".format(games_played))
 print("</body>")
