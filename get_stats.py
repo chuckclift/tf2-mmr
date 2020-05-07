@@ -7,7 +7,8 @@ an html report showing player statistics.
 import json
 import datetime
 from typing import Dict
-from steam.steamid import SteamID
+import html
+from steam.steamid import SteamID # type: ignore
 
 player_mmr = {}  # type: Dict[int, float]
 stats = {}  # type: Dict[int, Dict]
@@ -57,8 +58,7 @@ with open("game_logs.json") as game_logs:
 
         # getting usernames
         for id3, name in g["names"].items():
-            player_names[SteamID(id3).as_64] = " ".join(
-                name.split()).replace("<", "&lt;").replace(">", "&gt;")
+            player_names[SteamID(id3).as_64] = html.escape(name)
 
         game_time = g["info"]["total_length"]
 
@@ -92,6 +92,10 @@ with open("game_logs.json") as game_logs:
                 elif c["type"] == "spy":
                     safe_add(stats[id64]["spy"], "backstabs", d["backstabs"])
 
+
+search_dict = {n: i for i, n in player_names.items()}
+with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
+    usernames_file.write("var usernames = " + json.dumps(search_dict) + ";")
 
 print("""
 <html>

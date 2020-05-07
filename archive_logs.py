@@ -11,6 +11,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import time
 import json
+import html
 from typing import Set
 from steam.steamid import SteamID # type: ignore
 
@@ -55,7 +56,7 @@ else:
             if not line.strip():
                 continue
             steam_id, name = line.split(",")
-            usernames[int(steam_id)] = name
+            usernames[int(steam_id)] = html.escape(name)
 
 
 downloaded_games = set()  # type: Set[int]
@@ -68,8 +69,7 @@ else:
             game = json.loads(line)
             downloaded_games.add(game["id"])
             for steamid3, username in game["names"].items():
-                usernames[SteamID(steamid3).as_64] = " ".join(
-                    username.split()).replace("<", "").replace(">", "").replace(",", "")
+                usernames[SteamID(steamid3).as_64] = html.escape(username)
 
 print("found", len(downloaded_games), "games in game_logs.json")
 print("found", len(usernames), "users in game_logs.json")
