@@ -1,0 +1,69 @@
+<html>
+<head>
+    <meta charset=UTF-8>
+    <title>Profile: {{ username }}</title>
+    <link rel='icon' type='image/png' href='/favicon.ico'>
+    <style>
+    body {
+        background-color:#4d4d4d;
+        margin:0px;
+    }
+    td {
+        width: 120px;
+    }
+    th {
+        text-align:left;
+    }
+    </style>
+</head>
+<body>
+<nav style='background-color:#595959;'>
+&nbsp; &nbsp; <a  style='font-size:36px; color:white;' href='/team_report.html'>
+    Team Reports
+</a> &nbsp; &nbsp;
+<a  style='font-size:36px; color:white;' href='/'>
+    Player Reports
+</a>
+</nav>
+<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
+	<h1>{{ username }} {{ id64 }} </h1>
+	<p><b>mmr</b> {{ mmr | round(2) }} </p>
+<table>
+<tr>
+<th>classname</th>
+<th> K / M </th>
+<th> D / M </th>
+<th> KA / D </th>
+<th> DA / M </th>
+<th> DT / M </th>
+<th> DS </th>
+<th> Hours </th>
+</tr>
+{% for c in classstats %}
+<tr>
+	<td>{{ c.name }}</td>
+	<td>{{ c.kpm | round(2) }}</td>
+	<td>{{ c.depm | round(2)}}</td>
+	<td>{{ c.kapd | round(2)}}</td>
+	<td>{{ c.dpm | round(2)}}</td>
+	<td>{{ c.dtpm | round(2)}}</td>
+	<td>{{ c.ds | round(2)}}</td>
+	<td>{{ c.hrs | round(2)}}</td>
+</tr>
+{% endfor %} 
+</table>
+</div>
+<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
+<h1>Glossary</h1>
+<h2>K / M : Kills per Minute</h2>
+<h2>D / M : Deaths per Minute</h2>
+<h2>KA / D : Kills and assists per death</h2>
+<h2>DA / M : Damage per Minute</h2>
+<h2>DT / M : Damage taken  per Minute</h2>
+<h2>DS : Damage Surplus ( DA/M - DT/M )</h2>
+<p>log data from {{ oldest }} to {{ newest }}</p>
+<p>{{ players }} players found</p>
+<p>{{ games }} games analyzed</p>
+</div>
+</body>
+</html>

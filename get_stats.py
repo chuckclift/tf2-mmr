@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-This script parses data from the game_logs.json file and uses it to generate
-an html report showing player statistics.
+This script generates user profile html pages from data in
+the game_logs.json file.
 """
 
 import json
 import datetime
 from typing import Dict
 import html
-from steam.steamid import SteamID # type: ignore
+from collections import namedtuple
+from steam.steamid import SteamID  # type: ignore
+from jinja2 import Template
 
 player_mmr = {}  # type: Dict[int, float]
 stats = {}  # type: Dict[int, Dict]
@@ -37,9 +39,9 @@ with open("player_scores.csv", encoding="utf-8") as f:
         id_field, mmr_field = line.split(",")
         player_mmr[int(id_field)] = float(mmr_field)
 
-newest_log = None # pylint: disable=C0103
-oldest_log = None # pylint: disable=C0103
-games_played = 0 # pylint: disable=C0103
+newest_log = None  # pylint: disable=C0103
+oldest_log = None  # pylint: disable=C0103
+games_played = 0  # pylint: disable=C0103
 
 with open("game_logs.json") as game_logs:
     for line in game_logs:
@@ -63,7 +65,7 @@ with open("game_logs.json") as game_logs:
         game_time = g["info"]["total_length"]
 
         for id3, d in g["players"].items():
-            id64 = SteamID(id3).as_64 # pylint: disable=C0103
+            id64 = SteamID(id3).as_64  # pylint: disable=C0103
             if id64 not in stats:
                 stats[id64] = {}
 
@@ -97,96 +99,40 @@ search_dict = {n: i for i, n in player_names.items()}
 with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
     usernames_file.write("var usernames = " + json.dumps(search_dict) + ";")
 
-print("""
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Player Stats</title>
-    <link rel='icon' type='image/png' href='/favicon.ico'>
-    <style>
-    body {
-        background-color:#4d4d4d;
-        margin:0px;
-    }
-    td {
-        width: 120px;
-    }
-    th {
-        text-align:left;
-    }
-    </style>
-</head>
-<body>
-<nav style='background-color:#595959;'>
-&nbsp; &nbsp;
-<a  style='font-size:36px; color:white;' href='/team_report.html'>
-    Team Reports
-</a> &nbsp; &nbsp;
-<a  style='font-size:36px; color:white;' href='/'>
-    Player Reports
-</a>
-</nav>
-""")
+
+with open("profile.html", encoding="utf-8") as template_file:
+    profile_template = Template(template_file.read())
+
+
+class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
 
 for id64, s in stats.items():
-    print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>")
-    print("<h1>", player_names[id64], id64, "</h1>")
     mmr = player_mmr.get(id64, float("nan"))
-    print("<p><b>mmr</b> : {:.2f}</p>".format(mmr))
-    print("<table>")
-    print("<tr>" +
-          "<th>classname</th>" +
-          "<th> K / M </th>" +
-          "<th> D / M </th>" +
-          "<th> KA / D </th>" +
-          "<th> DA / M </th>" +
-          "<th> DT / M </th>" +
-          "<th> DaS </th>" +
-          "<th> Hours </th>" +
-          "</tr>")
+    player_class_stats = []
     for classname, class_stats in sorted(s.items(), key=lambda x: x[1]["total_time"], reverse=True):
         M = class_stats["total_time"] / 60
-        if M < 1:
-            # ignore classes with under 1 minute of playtime
+        if M < 2:
             continue
-
         if classname not in classnames:
             continue
+        kpm = class_stats["kills"] / M
+        depm = class_stats["deaths"] / M
 
-        ka_per_d = float("nan")
+        kapd = float("nan")
         if class_stats["deaths"] > 0:
-            ka_per_d = ((class_stats["kills"] + class_stats["assists"]) /
-                        class_stats["deaths"])
-        damage_surplus = class_stats["dmg"] / M - class_stats["dt"] / M
-        row_str = ("<tr>" +
-                   "<td>{}</td>".format(classname) +
-                   "<td>{:.2f}</td>".format(class_stats["kills"] / M) +
-                   "<td>{:.2f}</td>".format(class_stats["deaths"] / M) +
-                   "<td>{:.2f}</td>".format(ka_per_d) +
-                   "<td>{:.2f}</td>".format(class_stats["dmg"] / M) +
-                   "<td>{:.2f}</td>".format(class_stats["dt"] / M) +
-                   "<td>{:.2f}</td>".format(damage_surplus) +
-                   "<td>{:.2f}</td>".format(M / 60) +
-                   "</tr>")
-        print(row_str)
-
-    print("</table>")
-    print("</div>")
-
-
-print("""
-<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
-<h1>Glossary</h1>
-<h2>K / M : Kills per Minute</h2>
-<h2>D / M : Deaths per Minute</h2>
-<h2>KA / D : Kills and assists per death</h2>
-<h2>DA / M : Damage per Minute</h2>
-<h2>DT / M : Damage taken  per Minute</h2>
-<h2>DaS : Damage Surplus ( DA/M - DT/M )</h2>
-<p>log data from {oldest} to {newest}</p>
-<p>{players} players found</p>
-<p>{games} games analyzed</p>
-</div>
-""".format(oldest=oldest_log, newest=newest_log, players=len(stats),
-           games=games_played))
-print("</body></html>")
+            kapd = ((class_stats["kills"] + class_stats["assists"]) /
+                    class_stats["deaths"])
+        dpm = class_stats["dmg"] / M
+        dtpm = class_stats["dt"] / M
+        ds = dpm - dtpm
+        hrs = M / 60
+        player_class_stats.append(class_stat(
+            classname, kpm, depm, kapd, dpm, dtpm, ds, hrs))
+    with open("html/players/{}.html".format(id64), "w", encoding="utf-8") as html_profile:
+        html_profile.write(profile_template.render(username=player_names[id64],
+                                                   mmr=mmr,
+                                                   classstats=player_class_stats,
+                                                   games=games_played,
+                                                   players=len(player_mmr),
+                                                   oldest=oldest_log,
+                                                   newest=newest_log))
