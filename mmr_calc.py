@@ -5,7 +5,6 @@ import trueskill
 from steam.steamid import SteamID
 
 
-games = []
 player_ratings = {}
 log_index = []
 
