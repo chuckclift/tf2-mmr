@@ -5,6 +5,7 @@ import datetime
 from typing import Dict
 from steam.steamid import SteamID
 
+player_mmr = {} # type: Dict[int, float]
 stats = {}  # type: Dict[int, Dict]
 player_names = {}  # type: Dict[int, str]
 classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
@@ -18,6 +19,12 @@ def safe_add(dct, k, v):
     else:
         dct[k] = v
 
+with open("player_scores.csv", encoding="utf-8") as f:
+    for line in f:
+        if not line:
+            continue
+        id_field, mmr_field = line.split(",")
+        player_mmr[int(id_field)] = float(mmr_field)
 
 newest_log = None
 oldest_log = None
@@ -90,9 +97,6 @@ print("""
         background-color:#4d4d4d;
         margin:0px;
     }
-    nav {
-        background-color:#595959;
-    }
     td {
         width: 120px; 
     }
@@ -102,18 +106,22 @@ print("""
     </style>
 </head>
 <body>
-<nav>
+<nav style='background-color:#595959;'>
 &nbsp; &nbsp; 
 <a  style='font-size:36px; color:white;' href='/team_report.html'>
     Team Reports
+</a> &nbsp; &nbsp;
+<a  style='font-size:36px; color:white;' href='/player_report.html'>
+    Player Reports
 </a>
 </nav>
-    
 """)
 
 for id64, s in stats.items():
     print("<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>")
     print("<h1>", player_names[id64], id64, "</h1>")
+    mmr = float("nan") if id64 not in player_mmr else player_mmr[id64] 
+    print("<p><span style='font-weight:bold;'>mmr</span>{:.2f}</p>".format(mmr))
 
     print("<table>")
     print("<tr>" +
