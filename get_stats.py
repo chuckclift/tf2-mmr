@@ -13,8 +13,9 @@ from steam.steamid import SteamID  # type: ignore
 from jinja2 import Template
 
 player_mmr = {}  # type: Dict[int, float]
-stats = {}  # type: Dict[int, Dict]
-player_names = {}  # type: Dict[int, str]
+stats = {}  # type: Dict[str, Dict]
+player_names = {}  # type: Dict[str, str]
+teammate_counts = {}  # type: Dict[str, Dict[str, int]]
 classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
               "engineer", "demoman", "heavyweapons"]
 
@@ -46,7 +47,7 @@ games_played = 0  # pylint: disable=C0103
 with open("game_logs.json") as game_logs:
     for line in game_logs:
         games_played += 1
-        g = json.loads(line)
+        g = json.loads(line)  # json.loads(line)
         upload_date = datetime.datetime.fromtimestamp(g["info"]["date"])
         if not newest_log:
             newest_log = upload_date
@@ -60,42 +61,71 @@ with open("game_logs.json") as game_logs:
 
         # getting usernames
         for id3, name in g["names"].items():
-            player_names[SteamID(id3).as_64] = html.escape(name)
+            player_names[id3] = html.escape(name)
+
+        red = [id3 for id3, d in g["players"].items() if d["team"] == "Red"]
+        blue = [id3 for id3, d in g["players"].items() if d["team"] == "Blue"]
+        for id3 in red:
+            if id3 not in teammate_counts:
+                teammate_counts[id3] = {}
+
+            for teammate_id3 in red:
+                if teammate_id3 is id3:
+                    continue
+
+                if teammate_id3 not in teammate_counts[id3]:
+                    teammate_counts[id3][teammate_id3] = 1
+                else:
+                    teammate_counts[id3][teammate_id3] += 1
+
+        for id3 in blue:
+            if id3 not in teammate_counts:
+                teammate_counts[id3] = {}
+
+            for teammate_id3 in blue:
+                if teammate_id3 is id3:
+                    continue
+
+                if teammate_id3 not in teammate_counts[id3]:
+                    teammate_counts[id3][teammate_id3] = 1
+                else:
+                    teammate_counts[id3][teammate_id3] += 1
 
         game_time = g["info"]["total_length"]
 
         for id3, d in g["players"].items():
-            id64 = SteamID(id3).as_64  # pylint: disable=C0103
-            if id64 not in stats:
-                stats[id64] = {}
+            if id3 not in stats:
+                stats[id3] = {}
 
             for c in d["class_stats"]:
-                if c["type"] not in stats[id64]:
-                    stats[id64][c["type"]] = {}
+                if c["type"] not in stats[id3]:
+                    stats[id3][c["type"]] = {}
 
-                safe_add(stats[id64][c["type"]], "kills", c["kills"])
-                safe_add(stats[id64][c["type"]], "assists", c["assists"])
-                safe_add(stats[id64][c["type"]], "deaths", c["deaths"])
-                safe_add(stats[id64][c["type"]], "dmg", c["dmg"])
-                safe_add(stats[id64][c["type"]], "total_time", c["total_time"])
+                safe_add(stats[id3][c["type"]], "kills", c["kills"])
+                safe_add(stats[id3][c["type"]], "assists", c["assists"])
+                safe_add(stats[id3][c["type"]], "deaths", c["deaths"])
+                safe_add(stats[id3][c["type"]], "dmg", c["dmg"])
+                safe_add(stats[id3][c["type"]], "total_time", c["total_time"])
 
                 estimated_heal = d["heal"] * c["total_time"] / game_time
-                safe_add(stats[id64][c["type"]], "heal", estimated_heal)
+                safe_add(stats[id3][c["type"]], "heal", estimated_heal)
 
                 estimated_dt = d["dt"] * c["total_time"] / game_time
-                safe_add(stats[id64][c["type"]], "dt", estimated_dt)
+                safe_add(stats[id3][c["type"]], "dt", estimated_dt)
 
                 if c["type"] == "medic":
-                    safe_add(stats[id64]["medic"], "drops", d["drops"])
-                    safe_add(stats[id64]["medic"], "ubers", d["ubers"])
+                    safe_add(stats[id3]["medic"], "drops", d["drops"])
+                    safe_add(stats[id3]["medic"], "ubers", d["ubers"])
                 elif c["type"] == "sniper":
-                    safe_add(stats[id64]["sniper"],
+                    safe_add(stats[id3]["sniper"],
                              "headshots_hit", d["headshots_hit"])
                 elif c["type"] == "spy":
-                    safe_add(stats[id64]["spy"], "backstabs", d["backstabs"])
+                    safe_add(stats[id3]["spy"], "backstabs", d["backstabs"])
 
 
-search_dict = {n: i for i, n in player_names.items()}
+search_dict = {n: SteamID(i).as_64 for i, n
+               in player_names.items()}  # type: Dict[str, int]
+
 with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
     usernames_file.write("var usernames = " + json.dumps(search_dict) + ";")
 
@@ -106,8 +136,12 @@ with open("profile.html", encoding="utf-8") as template_file:
 
 class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
 
-for id64, s in stats.items():
-    mmr = player_mmr.get(id64, float("nan"))
+for id3, s in stats.items():
+    mmr = player_mmr.get(id3, float("nan"))
+    top_teammates = sorted([(teammate_counts[id3][a], a)
+                            for a in teammate_counts[id3]], reverse=True)[:3]
+    teammate_names = [(html.escape(player_names[tid3]), SteamID(
+        tid3).as_64) for _, tid3 in top_teammates]
     player_class_stats = []
     for classname, class_stats in sorted(s.items(), key=lambda x: x[1]["total_time"], reverse=True):
         M = class_stats["total_time"] / 60
@@ -128,10 +162,11 @@ for id64, s in stats.items():
         hrs = M / 60
         player_class_stats.append(class_stat(
             classname, kpm, depm, kapd, dpm, dtpm, ds, hrs))
-    with open("html/players/{}.html".format(id64), "w", encoding="utf-8") as html_profile:
-        html_profile.write(profile_template.render(username=player_names[id64],
+    with open("html/players/{}.html".format(SteamID(id3).as_64), "w", encoding="utf-8") as html_profile:
+        html_profile.write(profile_template.render(username=html.escape(player_names[id3]),
                                                    mmr=mmr,
                                                    classstats=player_class_stats,
+                                                   teammates=teammate_names,
                                                    games=games_played,
                                                    players=len(player_mmr),
                                                    oldest=oldest_log,

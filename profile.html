@@ -54,6 +54,12 @@
 </table>
 </div>
 <div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
+<b>Common Teammates</b>
+{% for tm in teammates %}
+<p><a href="/players/{{ tm[1] }}.html"> {{ tm[0] }} </a></p>
+{% endfor %}
+</div>
+<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
 <h1>Glossary</h1>
 <h2>K / M : Kills per Minute</h2>
 <h2>D / M : Deaths per Minute</h2>
