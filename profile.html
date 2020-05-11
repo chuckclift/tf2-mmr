@@ -3,29 +3,25 @@
     <meta charset=UTF-8>
     <title>Profile: {{ username }}</title>
     <link rel='icon' type='image/png' href='/favicon.ico'>
-    <style>
-    body {
-        background-color:#4d4d4d;
-        margin:0px;
-    }
-    td {
-        width: 120px;
-    }
-    th {
-        text-align:left;
-    }
-    </style>
+    <link rel="stylesheet" type="text/css" href="/style.css">
 </head>
 <body>
 <nav style='background-color:#595959;'>
-&nbsp; &nbsp; <a  style='font-size:36px; color:white;' href='/team_report.html'>
+
+&nbsp; &nbsp; 
+<a  style='font-size:36px; color:white;' href='/'>
+    Search 
+</a>
+&nbsp; &nbsp; 
+<a  style='font-size:36px; color:white;' href='/team_report.html'>
     Team Reports
 </a> &nbsp; &nbsp;
-<a  style='font-size:36px; color:white;' href='/'>
+<a  style='font-size:36px; color:white;' href='/player_report.html'>
     Player Reports
 </a>
 </nav>
-<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
+<div class="container">
+<div class="content">
 	<h1>{{ username }} {{ id64 }} </h1>
 	<p><b>mmr</b> {{ mmr | round(2) }} </p>
 <table>
@@ -60,24 +56,24 @@
 	<p><b>{{ s[0] }} : {{ s[1] | round(2) }}</p>
 	{% endfor %}
 </div>
-{% endif %} 
-<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
+{% endif %}
 <b>Common Teammates</b>
 {% for tm in teammates %}
 <p><a href="/players/{{ tm[1] }}.html"> {{ tm[0] }} </a></p>
 {% endfor %}
 </div>
-<div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
-<h1>Glossary</h1>
-<h2>K / M : Kills per Minute</h2>
-<h2>D / M : Deaths per Minute</h2>
-<h2>KA / D : Kills and assists per death</h2>
-<h2>DA / M : Damage per Minute</h2>
-<h2>DT / M : Damage taken  per Minute</h2>
-<h2>DS : Damage Surplus ( DA/M - DT/M )</h2>
+<div class="content">
+<h2>Glossary</h2>
+<p><b>K / M <b> : Kills per Minute</p>
+<p><b>D / M <b>: Deaths per Minute</p>
+<p><b>KA / D <b>: Kills and assists per death</p>
+<p><b>DA / M <b>: Damage per Minute</p>
+<p><b>DT / M <b>: Damage taken  per Minute</p>
+<p><b>DS <b>: Damage Surplus ( DA/M - DT/M )</p>
 <p>log data from {{ oldest }} to {{ newest }}</p>
 <p>{{ players }} players found</p>
 <p>{{ games }} games analyzed</p>
+</div>
 </div>
 </body>
 </html>
