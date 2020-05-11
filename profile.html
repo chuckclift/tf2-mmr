@@ -1,6 +1,6 @@
 <html>
 <head>
-    <meta charset=UTF-8>
+    <meta charset="UTF-8">
     <title>Profile: {{ username }}</title>
     <link rel='icon' type='image/png' href='/favicon.ico'>
     <link rel="stylesheet" type="text/css" href="/style.css">
@@ -57,6 +57,7 @@
 	{% endfor %}
 </div>
 {% endif %}
+<div class="content">
 <b>Common Teammates</b>
 {% for tm in teammates %}
 <p><a href="/players/{{ tm[1] }}.html"> {{ tm[0] }} </a></p>
