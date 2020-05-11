@@ -162,10 +162,16 @@ for id3, s in stats.items():
         hrs = M / 60
         player_class_stats.append(class_stat(
             classname, kpm, depm, kapd, dpm, dtpm, ds, hrs))
+
+    advanced_stats = []
+    if "medic" in s and "drops" in s["medic"]:
+        advanced_stats.append(("drops", s["medic"]["drops"]))
+
     with open("html/players/{}.html".format(SteamID(id3).as_64), "w", encoding="utf-8") as html_profile:
         html_profile.write(profile_template.render(username=html.escape(player_names[id3]),
                                                    mmr=mmr,
                                                    classstats=player_class_stats,
+                                                   advanced_stats=advanced_stats,
                                                    teammates=teammate_names,
                                                    games=games_played,
                                                    players=len(player_mmr),

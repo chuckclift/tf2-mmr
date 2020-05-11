@@ -53,6 +53,14 @@
 {% endfor %} 
 </table>
 </div>
+{% if advanced_stats %} 
+<div class="content">
+	<b>Advanced Stats</b>
+	{% for s in advanced_stats %}
+	<p><b>{{ s[0] }} : {{ s[1] | round(2) }}</p>
+	{% endfor %}
+</div>
+{% endif %} 
 <div style='background-color:white; margin:20px; padding:10px; width: 80%;'>
 <b>Common Teammates</b>
 {% for tm in teammates %}
