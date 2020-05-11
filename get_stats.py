@@ -123,7 +123,7 @@ with open("game_logs.json") as game_logs:
                     safe_add(stats[id3]["spy"], "backstabs", d["backstabs"])
 
 
-search_dict = {n: SteamID(i).as_64 for i, n
+search_dict = {n: str(SteamID(i).as_64) for i, n
                in player_names.items()}  # type: Dict[str, int]
 
 with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
@@ -137,9 +137,10 @@ with open("profile.html", encoding="utf-8") as template_file:
 class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
 
 for id3, s in stats.items():
-    mmr = player_mmr.get(id3, float("nan"))
-    top_teammates = sorted([(teammate_counts[id3][a], a)
-                            for a in teammate_counts[id3]], reverse=True)[:3]
+    mmr = player_mmr.get(SteamID(id3).as_64, float("nan"))
+    sorted_teammates = sorted([(teammate_counts[id3][a], a)
+                              for a in teammate_counts[id3]], reverse=True)
+    top_teammates = sorted_teammates if len(sorted_teammates) < 10 else sorted_teammates[:10]
     teammate_names = [(html.escape(player_names[tid3]), SteamID(
         tid3).as_64) for _, tid3 in top_teammates]
     player_class_stats = []
