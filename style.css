@@ -1,5 +1,5 @@
 body {
-    background-color:#4d4d4d;
+    background-color:#404040;
     margin:0px;
 }
 td {
@@ -15,7 +15,19 @@ th {
     flex-wrap: wrap;
 }
 .content {
-    background-color:white; 
-    margin:20px; 
-    padding:10px; 
+	background-color:white; 
+	margin:20px;
+	padding:10px;
+}
+nav {
+	background-color:#595959;
+	display:flex;
+	flex-wrap:wrap;
+}
+nav a {
+	text-decoration: none;
+	display:block;
+	color:white;
+	font-size:36px;
+	padding:10px;
 }
