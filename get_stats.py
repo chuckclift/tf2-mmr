@@ -7,7 +7,6 @@ the game_logs.json file.
 import json
 import datetime
 from typing import Dict
-import html
 from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
 from jinja2 import Template
@@ -61,7 +60,7 @@ with open("game_logs.json") as game_logs:
 
         # getting usernames
         for id3, name in g["names"].items():
-            player_names[id3] = html.escape(name)
+            player_names[id3] = name
 
         red = [id3 for id3, d in g["players"].items() if d["team"] == "Red"]
         blue = [id3 for id3, d in g["players"].items() if d["team"] == "Blue"]
@@ -115,7 +114,9 @@ with open("game_logs.json") as game_logs:
 
                 if c["type"] == "medic":
                     safe_add(stats[id3]["medic"], "drops", d["drops"])
-                    safe_add(stats[id3]["medic"], "ubers", d["ubers"])
+                    safe_add(stats[id3]["medic"], "ubers", 0
+                             if "medigun" not in d["ubertypes"]
+                             else d["ubertypes"]["medigun"])
                 elif c["type"] == "sniper":
                     safe_add(stats[id3]["sniper"],
                              "headshots_hit", d["headshots_hit"])
@@ -124,14 +125,14 @@ with open("game_logs.json") as game_logs:
 
 
 search_dict = {n: str(SteamID(i).as_64) for i, n
-               in player_names.items()}  # type: Dict[str, int]
+               in player_names.items()}  # type: Dict[str, str]
 
 with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
     usernames_file.write("var usernames = " + json.dumps(search_dict) + ";")
 
 
 with open("profile.html", encoding="utf-8") as template_file:
-    profile_template = Template(template_file.read())
+    profile_template = Template(template_file.read(), autoescape=True)
 
 
 class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
@@ -139,10 +140,12 @@ class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
 for id3, s in stats.items():
     mmr = player_mmr.get(SteamID(id3).as_64, float("nan"))
     sorted_teammates = sorted([(teammate_counts[id3][a], a)
-                              for a in teammate_counts[id3]], reverse=True)
-    top_teammates = sorted_teammates if len(sorted_teammates) < 10 else sorted_teammates[:10]
-    teammate_names = [(html.escape(player_names[tid3]), SteamID(
-        tid3).as_64) for _, tid3 in top_teammates]
+                               for a in teammate_counts[id3]], reverse=True)
+    top_teammates = sorted_teammates if len(
+        sorted_teammates) < 10 else sorted_teammates[:10]
+    teammate_names =   [(player_names[tid3], SteamID(tid3).as_64)
+                      for _, tid3 in top_teammates]
+
     player_class_stats = []
     for classname, class_stats in sorted(s.items(), key=lambda x: x[1]["total_time"], reverse=True):
         M = class_stats["total_time"] / 60
@@ -165,11 +168,27 @@ for id3, s in stats.items():
             classname, kpm, depm, kapd, dpm, dtpm, ds, hrs))
 
     advanced_stats = []
-    if "medic" in s and "drops" in s["medic"]:
-        advanced_stats.append(("drops", s["medic"]["drops"]))
+    if "medic" in s and s["medic"]["total_time"] > 2 * 60:
+        M = s["medic"]["total_time"] / 60
+        advanced_stats.append(("drops / M", s["medic"]["drops"] / M))
+        advanced_stats.append(("ubers / M", s["medic"]["ubers"] / M))
 
-    with open("html/players/{}.html".format(SteamID(id3).as_64), "w", encoding="utf-8") as html_profile:
-        html_profile.write(profile_template.render(username=html.escape(player_names[id3]),
+        drops_to_ubers = (float("nan") if s["medic"]["drops"] == 0
+                          else s["medic"]["ubers"] / s["medic"]["drops"])
+        advanced_stats.append(("ubers / drops", drops_to_ubers))
+
+    if "sniper" in s and s["sniper"]["total_time"] > 2 * 60:
+        M = s["sniper"]["total_time"] / 60
+        advanced_stats.append(
+            ("headshots / M", s["sniper"]["headshots_hit"] / M))
+
+    if "spy" in s and s["spy"]["total_time"] > 2 * 60:
+        M = s["spy"]["total_time"] / 60
+        advanced_stats.append(("backstabs / M", s["spy"]["backstabs"] / M))
+
+    profile_filename = "html/players/{}.html".format(SteamID(id3).as_64)
+    with open(profile_filename, "w", encoding="utf-8") as html_profile:
+        html_profile.write(profile_template.render(username=player_names[id3],
                                                    mmr=mmr,
                                                    classstats=player_class_stats,
                                                    advanced_stats=advanced_stats,
