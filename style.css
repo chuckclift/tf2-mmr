@@ -25,9 +25,19 @@ nav {
 	flex-wrap:wrap;
 }
 nav a {
+	margin:5px;
+	padding:3px;
 	text-decoration: none;
 	display:block;
 	color:white;
-	font-size:36px;
-	padding:10px;
+	font-size:24px;
+}
+
+nav a:hover {
+	margin:5px;
+	padding:3px;
+	text-decoration: none;
+	display:block;
+	color:grey;
+	font-size:24px;
 }
