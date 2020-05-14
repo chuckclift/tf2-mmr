@@ -11,9 +11,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import time
 import json
-import html
 from typing import Set
-from steam.steamid import SteamID # type: ignore
 
 SLEEP_TIME = 3
 SEASON = datetime.now() - timedelta(days=60)
@@ -46,19 +44,6 @@ def get_game_ids():
         time.sleep(60 * 5)
 
 
-usernames = {}
-if not Path("usernames.csv").is_file():
-    with open("usernames.csv", "w+") as f:
-        print("created usernames.csv")
-else:
-    with open("usernames.csv", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            steam_id, name = line.split(",")
-            usernames[int(steam_id)] = html.escape(name)
-
-
 downloaded_games = set()  # type: Set[int]
 if not Path("game_logs.json").is_file():
     with open("game_logs.json", "w+") as f:
@@ -68,11 +53,8 @@ else:
         for line in f:
             game = json.loads(line)
             downloaded_games.add(game["id"])
-            for steamid3, username in game["names"].items():
-                usernames[SteamID(steamid3).as_64] = html.escape(username)
 
 print("found", len(downloaded_games), "games in game_logs.json")
-print("found", len(usernames), "users in game_logs.json")
 
 
 for gid in get_game_ids():
@@ -88,10 +70,6 @@ for gid in get_game_ids():
         del game_details["chat"]
         game_details["id"] = gid
 
-        for steamid3, username in game_details["names"].items():
-            usernames[SteamID(steamid3).as_64] = " ".join(
-                username.split()).replace("<", "").replace(">", "").replace(",", "")
-
         with open("game_logs.json", "a", encoding="utf-8") as games_file:
             games_file.write(json.dumps(game_details) + "\n")
 
@@ -101,7 +79,3 @@ for gid in get_game_ids():
         time.sleep(60 * 5)
 
     time.sleep(SLEEP_TIME)
-
-with open("usernames.csv", "w") as f:
-    for id64, name in usernames.items():
-        f.write("{},{}\n".format(id64, name))
