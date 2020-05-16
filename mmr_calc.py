@@ -53,7 +53,8 @@ for game in get_sorted_games():
     red_ratings = [player_ratings[i] for i in red_ids]
     blue_ratings = [player_ratings[i] for i in blue_ids]
 
-    if len(red_ratings) == 0 or len(blue_ratings) == 0:
+    if not red_ratings or not blue_ratings:
+        # ignoring games without an opposing team
         continue
 
     if game["teams"]["Red"]["score"] > game["teams"]["Blue"]["score"]:
