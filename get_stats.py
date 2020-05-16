@@ -46,7 +46,7 @@ games_played = 0  # pylint: disable=C0103
 with open("game_logs.json") as game_logs:
     for line in game_logs:
         games_played += 1
-        g = json.loads(line)  # json.loads(line)
+        g = json.loads(line)
         upload_date = datetime.datetime.fromtimestamp(g["info"]["date"])
         if not newest_log:
             newest_log = upload_date
