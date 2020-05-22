@@ -9,7 +9,7 @@ import datetime
 from typing import Dict
 from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
-from jinja2 import Template
+import jinja2
 
 player_mmr = {}  # type: Dict[int, float]
 stats = {}  # type: Dict[str, Dict]
@@ -131,8 +131,9 @@ with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
     usernames_file.write("var usernames = " + json.dumps(search_dict) + ";")
 
 
-with open("profile.html", encoding="utf-8") as template_file:
-    profile_template = Template(template_file.read(), autoescape=True)
+jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader("templates"),
+                               autoescape=True)
+profile_template = jinja_env.get_template("profile.html")
 
 
 class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
