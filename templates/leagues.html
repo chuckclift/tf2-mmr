@@ -10,7 +10,7 @@
 	{% for league in season["leagues"] %}
 		<h3> {{ league["name"] }} {{ league["median"] | round(2) }} </h3>
 		{% for team in league["teams"] %} 
-		<p>&nbsp; &nbsp; <b> {{ team["name"] }} </b> Top 6 {{ team["top6"] | round(2) }} </p>
+		<p>&nbsp; &nbsp; <b> {{ team["name"] }} </b> {{ team["top6"] | round(2) }} </p>
 		{% endfor %}
 	{% endfor %}
 </div>
