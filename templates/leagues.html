@@ -1,0 +1,19 @@
+{% extends "base.html" %} 
+{% block title %} League Report {% endblock %}
+
+{% block content %}
+
+{% for season in seasons %}
+
+<div style="background-color:white; margin:20px; padding:20px;">
+	<h1>{{ season["name"] }} </h1>
+	{% for league in season["leagues"] %}
+		<h3> {{ league["name"] }} {{ league["median"] | round(2) }} </h3>
+		{% for team in league["teams"] %} 
+		<p>&nbsp; &nbsp; <b> {{ team["name"] }} </b> Top 6 {{ team["top6"] | round(2) }} </p>
+		{% endfor %}
+	{% endfor %}
+</div>
+
+{% endfor %}
+{% endblock %}
