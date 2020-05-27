@@ -5,6 +5,7 @@ the game_logs.json file.
 """
 
 import json
+import copy
 import datetime
 from typing import Dict
 from collections import namedtuple
@@ -17,19 +18,29 @@ player_names = {}  # type: Dict[str, str]
 teammate_counts = {}  # type: Dict[str, Dict[str, int]]
 classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
               "engineer", "demoman", "heavyweapons"]
+base_stats = ["kills", "assists", "deaths", "dmg", "dt", "total_time", "heal"]
+
+base_player = {cname:{k:0 for k in base_stats} for cname in classnames}
+base_player["medic"]["drops"] = 0
+base_player["medic"]["ubers"] = 0
+base_player["sniper"]["headshots_hit"] = 0
+base_player["spy"]["backstabs"] = 0
 
 
-def safe_add(dct, key, value):
+def count_teammates(gamelog):
     """
-    adds the given value to the key's value in the dictionary.
-    If the key is not present in the dictionary, the value
-    is set to the supplied value.
+    updates the number of times played with other players
     """
-    if key in dct:
-        dct[key] += value
+    for user1_id3, d1 in gamelog["players"].items():
+        if user1_id3 not in teammate_counts:
+            teammate_counts[user1_id3] = {}
 
-    else:
-        dct[key] = value
+        for user2_id3, d2 in gamelog["players"].items():
+            if d1["team"] == d2["team"] and user1_id3 != user2_id3:
+                if user2_id3 in teammate_counts[user1_id3]:
+                    teammate_counts[user1_id3][user2_id3] += 1
+                else:
+                    teammate_counts[user1_id3][user2_id3] = 1
 
 
 with open("player_scores.csv", encoding="utf-8") as f:
@@ -48,80 +59,50 @@ with open("game_logs.json") as game_logs:
         games_played += 1
         g = json.loads(line)
         upload_date = datetime.datetime.fromtimestamp(g["info"]["date"])
-        if not newest_log:
-            newest_log = upload_date
-        else:
+        if newest_log:
             newest_log = max(newest_log, upload_date)
-
-        if not oldest_log:
-            oldest_log = upload_date
         else:
+            newest_log = upload_date
+
+        if oldest_log:
             oldest_log = min(oldest_log, upload_date)
+        else: 
+            oldest_log = upload_date
 
         # getting usernames
         for id3, name in g["names"].items():
             player_names[id3] = name
 
-        red = [id3 for id3, d in g["players"].items() if d["team"] == "Red"]
-        blue = [id3 for id3, d in g["players"].items() if d["team"] == "Blue"]
-        for id3 in red:
-            if id3 not in teammate_counts:
-                teammate_counts[id3] = {}
-
-            for teammate_id3 in red:
-                if teammate_id3 is id3:
-                    continue
-
-                if teammate_id3 not in teammate_counts[id3]:
-                    teammate_counts[id3][teammate_id3] = 1
-                else:
-                    teammate_counts[id3][teammate_id3] += 1
-
-        for id3 in blue:
-            if id3 not in teammate_counts:
-                teammate_counts[id3] = {}
-
-            for teammate_id3 in blue:
-                if teammate_id3 is id3:
-                    continue
-
-                if teammate_id3 not in teammate_counts[id3]:
-                    teammate_counts[id3][teammate_id3] = 1
-                else:
-                    teammate_counts[id3][teammate_id3] += 1
-
+        count_teammates(g)
         game_time = g["info"]["total_length"]
 
         for id3, d in g["players"].items():
             if id3 not in stats:
-                stats[id3] = {}
+                stats[id3] = copy.deepcopy(base_player)
 
             for c in d["class_stats"]:
-                if c["type"] not in stats[id3]:
-                    stats[id3][c["type"]] = {}
-
-                safe_add(stats[id3][c["type"]], "kills", c["kills"])
-                safe_add(stats[id3][c["type"]], "assists", c["assists"])
-                safe_add(stats[id3][c["type"]], "deaths", c["deaths"])
-                safe_add(stats[id3][c["type"]], "dmg", c["dmg"])
-                safe_add(stats[id3][c["type"]], "total_time", c["total_time"])
+                if c["type"] not in classnames:
+                    continue
+                elif c["type"] == "medic":
+                    stats[id3]["medic"]["drops"] += d["drops"]
+                    if "medigun" in d["ubertypes"]: 
+                            stats[id3]["medic"]["ubers"] += d["ubertypes"]["medigun"]
+                elif c["type"] == "sniper":
+                    stats[id3]["sniper"]["headshots_hit"] += d["headshots_hit"]
+                elif c["type"] == "spy":
+                    stats[id3]["spy"]["backstabs"] += d["backstabs"]
+                stats[id3][c["type"]]["kills"] += c["kills"]
+                stats[id3][c["type"]]["assists"] += c["assists"]
+                stats[id3][c["type"]]["deaths"] += c["deaths"]
+                stats[id3][c["type"]]["dmg"] += c["dmg"]
+                stats[id3][c["type"]]["total_time"] += c["total_time"]
 
                 estimated_heal = d["heal"] * c["total_time"] / game_time
-                safe_add(stats[id3][c["type"]], "heal", estimated_heal)
+                stats[id3][c["type"]]["heal"] += estimated_heal
 
                 estimated_dt = d["dt"] * c["total_time"] / game_time
-                safe_add(stats[id3][c["type"]], "dt", estimated_dt)
+                stats[id3][c["type"]]["dt"] += estimated_dt
 
-                if c["type"] == "medic":
-                    safe_add(stats[id3]["medic"], "drops", d["drops"])
-                    safe_add(stats[id3]["medic"], "ubers", 0
-                             if "medigun" not in d["ubertypes"]
-                             else d["ubertypes"]["medigun"])
-                elif c["type"] == "sniper":
-                    safe_add(stats[id3]["sniper"],
-                             "headshots_hit", d["headshots_hit"])
-                elif c["type"] == "spy":
-                    safe_add(stats[id3]["spy"], "backstabs", d["backstabs"])
 
 
 search_dict = {n: str(SteamID(i).as_64) for i, n
@@ -138,13 +119,14 @@ profile_template = jinja_env.get_template("profile.html")
 
 class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
 
+
 for id3, s in stats.items():
     mmr = player_mmr.get(SteamID(id3).as_64, float("nan"))
     sorted_teammates = sorted([(teammate_counts[id3][a], a)
                                for a in teammate_counts[id3]], reverse=True)
     top_teammates = sorted_teammates if len(
         sorted_teammates) < 10 else sorted_teammates[:10]
-    teammate_names =   [(player_names[tid3], SteamID(tid3).as_64)
+    teammate_names = [(player_names[tid3], SteamID(tid3).as_64)
                       for _, tid3 in top_teammates]
 
     player_class_stats = []
