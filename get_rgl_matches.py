@@ -25,11 +25,8 @@ MATCH_RE = re.compile(r"Match\.aspx\?.*m=([0-9]+)")
 RGL_DATE = re.compile("[0-9]{1,2}/[0-9]{1,2}/[0-9]{1,4}")
 
 
-h = {"User-Agent": "Rgl Retriever"}
-
-r = Request("https://rgl.gg/Public/Regions.aspx", headers=h)
-response = urlopen(r).read().decode("utf-8")
-doc = bs4.BeautifulSoup(response, "html.parser")
+Bs4Results = Optional[bs4.element.ResultSet]
+Bs4Tag = Optional[bs4.element.Tag]
 
 seasons = {}  # type: Dict[int, str]
 team_names = {}  # typing: Dict[int, str]
@@ -43,6 +40,13 @@ RglPlayer = NamedTuple("RglPlayer", [("id", int),
                                      ("joined", Optional[datetime]),
                                      ("left", Optional[datetime])])
 
+RglPlayerEntry = NamedTuple("RglPlayerEntry", [("id", int),
+                                               ("joined", Optional[datetime]),
+                                               ("left", Optional[datetime]),
+                                               ("team_id", int),
+                                               ("region_id", int),
+                                               ("season_id", int),
+                                               ("league_id", int)])
 
 RglMatch = NamedTuple("RglMatch", [("id", int),
                                    ("date", Optional[datetime]),
@@ -53,12 +57,79 @@ RglMatch = NamedTuple("RglMatch", [("id", int),
                                    ("team2_score", Optional[float])])
 
 
+def read_player_entries():  # type: () -> List[RglPlayerEntry]
+    player_entries = []
+    with open("player_teams.csv", encoding="utf-8") as f:
+        for line in f:
+            pid, joined, left, tid, rid, season, league = line.split(",")
+
+            joined_timestamp = float(joined)
+            join_date = (None if not joined_timestamp
+                         else datetime.fromtimestamp(joined_timestamp))
+
+            left_timestamp = float(left)
+            left_date = (None if not left_timestamp
+                         else datetime.fromtimestamp(left_timestamp))
+
+            player_entries.append(RglPlayerEntry(int(pid),
+                                                 join_date,
+                                                 left_date,
+                                                 int(tid),
+                                                 int(rid),
+                                                 int(season),
+                                                 int(league)))
+    return player_entries
+
+
+def read_matches():  # type: () -> List[RglMatch]
+    csv_matches = []
+    with open("matches.csv", encoding="utf-8") as f:
+        for line in f:
+            if not line:
+                continue
+
+            # format(m.id, m.team1, m.team1_score, m.team2, m.team2_score, m.date, mapname)
+            fields = line.split(",")
+
+            team1_score = None  # type: Optional[float]
+            if not fields[2].strip() == "None":
+                team1_score = float(fields[2])
+
+            team2_score = None  # type: Optional[float]
+            if not fields[4].strip() == "None":
+                team2_score = float(fields[4])
+
+            match_date = None
+            if not fields[5].strip() == "None":
+                match_date = datetime.fromtimestamp(float(fields[5]))
+            maps = set(fields[6].split(" "))
+            csv_matches.append(RglMatch(int(fields[0]),  # match id
+                                        match_date,
+                                        maps,
+                                        int(fields[1]),  # team 1
+                                        team1_score,
+                                        int(fields[3]),  # team 2
+                                        team2_score))
+    return csv_matches
+
+
+def read_teams():  # type: () -> Dict
+    rgl_teams = {}
+    with open("rgl_teams.csv", encoding="utf-8") as f:
+        for line in f:
+            if not line:
+                continue
+            tid, name = line.split(",")
+            rgl_teams[int(tid)] = name
+    return rgl_teams
+
+
 def row_to_player(tr):  # type: (bs4.element.Tag) -> Optional[RglPlayer]
     """
     Extracts an RGL Player from a table row of a team page
     """
-    player_link = tr.find("a", href=PLAYER_RE) # type: Optional[bs4.element.Tag]
-    date_rows = tr.find_all("td", text=RGL_DATE) # type: Optional[bs4.element.ResultSet]
+    player_link = tr.find("a", href=PLAYER_RE)  # type:  Bs4Tag
+    date_rows = tr.find_all("td", text=RGL_DATE)  # type: Bs4Results
 
     if not player_link:
         logging.info("No player links in " + str(tr))
@@ -93,7 +164,7 @@ def row_to_match(tr):  # type: (bs4.element.Tag) -> Optional[RglMatch]
     """
     Extracts an RGL Match from the table row of a team page
     """
-    match_link = tr.find("a", href=MATCH_RE)  # type: Optional[bs4.element.Tag]
+    match_link = tr.find("a", href=MATCH_RE)  # type: Bs4Tag
     if not match_link:
         logging.info("No match link in " + str(tr))
         return None
@@ -104,17 +175,13 @@ def row_to_match(tr):  # type: (bs4.element.Tag) -> Optional[RglMatch]
         return None
     match_id = int(match_id_match.group(1))
 
-    # map_cell = cells[1]  # type: bs4.element.Tag
-    map_images = tr.find_all("img")  # type: Optional[bs4.element.ResultSet]
-    # type: Optional[bs4.element.ResultSet]
-    team_links = tr.find_all("a", href=TEAM_RE)
+    team_links = tr.find_all("a", href=TEAM_RE)  # type: Bs4Results
 
-    if not map_images or not team_links:
-        logging.info("No match info in " + str(tr))
+    if not team_links:
+        logging.info("No team link in " + str(tr))
         return None
 
-    map_links = [img.parent for img in map_images]
-    match_maps = {i.get("title") for i in map_links}
+    match_maps = {img.parent.get("title") for img in tr.find_all("img")}
 
     team_hrefs = [a.get("href") for a in team_links]  # type: List[str]
     teams = [re.search(TEAM_RE, h) for h in team_hrefs]
@@ -130,23 +197,23 @@ def row_to_match(tr):  # type: (bs4.element.Tag) -> Optional[RglMatch]
     team1_score = None
     team2_score = None
 
-    RGL_SCORE = re.compile(r"(\d{1,2}\.?\d{0,3})\s*-\s*(\d{1,2}\.?\d{0,3})")
-    # type: Optional[bs4.element.ResultSet]
-    two_number_cells = tr.find_all("td", text=RGL_SCORE)
+    RGL_SCORE = re.compile(r"(-?\d{1,3}\.?\d{0,3})\s*-\s*(-?\d{1,3}\.?\d{0,3})")
+    two_number_cells = tr.find_all("td", text=RGL_SCORE)  # type: Bs4Results
     if two_number_cells:
         # cells like the team cells, the match cell, and the map cells have links
         # in them.  This list comprehension gets rid of them
         score_cell = [c for c in two_number_cells if not c.find("a")][0]
-        score1, score2 = score_cell.text.split("-")
-        team1_score = float(score1.strip())
-        team2_score = float(score2.strip())
+        score_match = re.search(RGL_SCORE, score_cell.text)
+        if score_match:
+            team1_score = float(score_match.group(1))
+            team2_score = float(score_match.group(2))
 
     match_dtime = None  # type: Optional[datetime]
-    # type: Optional[bs4.element.ResultSet]
-    date_cells = tr.find_all("td", text=RGL_DATE)
+    date_cells = tr.find_all("td", text=RGL_DATE)  # type: Bs4Results
+
     if date_cells:
-        match_date = [d.text for d in date_cells if not d.find(
-            "a")][0]  # type: str
+        match_date = [d.text for d in date_cells
+                      if not d.find("a")][0]  # type: str
         if match_date:
             match_date = " ".join(match_date.split()[:3])
             match_dtime = datetime.strptime(
@@ -155,7 +222,12 @@ def row_to_match(tr):  # type: (bs4.element.Tag) -> Optional[RglMatch]
                     team2, team2_score)
 
 
-if __name__ == "__main__":
+def main():
+    h = {"User-Agent": "Rgl Retriever"}
+    r = Request("https://rgl.gg/Public/Regions.aspx", headers=h)
+    response = urlopen(r).read().decode("utf-8")
+    doc = bs4.BeautifulSoup(response, "html.parser")
+
     for l in doc.find_all("a", href=LEAGUE_TABLE_RE):
         season_id_match = re.search("s=([0-9]+)", l.get("href"))
         if season_id_match:
@@ -232,13 +304,15 @@ if __name__ == "__main__":
                       if tr.find("a", href=MATCH_RE)]  # type: List[Optional[RglMatch]]
         matches = [row_to_match(tr) for tr in match_rows]
         valid_matches = [m for m in matches if m]  # type: List[RglMatch]
-
         with open("matches.csv", "a", encoding="utf-8") as f:
             for m in valid_matches:
-                for mapname in m.maps:
-                    f.write("{},{},{},{},{},{},{}\n".format(m.id, m.team1, m.team1_score,
-                                                            m.team2, m.team2_score,
-                                                            m.date, mapname))
+                map_cell = " ".join(m.maps)
+                date_cell = "None"
+                if m.date:
+                    date_cell = str(m.date.timestamp())
+                f.write("{},{},{},{},{},{},{}\n".format(m.id, m.team1, m.team1_score,
+                                                        m.team2, m.team2_score,
+                                                        date_cell, map_cell))
 
     with open("rgl_teams.csv", "w", encoding="utf-8") as f:
         for t, n in team_names.items():
@@ -251,3 +325,7 @@ if __name__ == "__main__":
     with open("rgl_users.csv", "w", encoding="utf-8") as f:
         for id64, username in usernames:
             f.write("{},{}\n".format(id64, username.replace(",", " ")))
+
+
+if __name__ == "__main__":
+    main()
