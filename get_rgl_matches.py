@@ -102,7 +102,7 @@ def read_matches():  # type: () -> List[RglMatch]
             match_date = None
             if not fields[5].strip() == "None":
                 match_date = datetime.fromtimestamp(float(fields[5]))
-            maps = set(fields[6].split(" "))
+            maps = {m.strip() for m in fields[6].split(" ")}
             csv_matches.append(RglMatch(int(fields[0]),  # match id
                                         match_date,
                                         maps,
