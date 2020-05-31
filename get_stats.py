@@ -7,6 +7,7 @@ the game_logs.json file.
 import json
 import copy
 import datetime
+import itertools
 from typing import Dict, Tuple, Optional
 from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
@@ -33,16 +34,27 @@ def count_teammates(gamelog):
     """
     updates the number of times played with other players
     """
-    for user1_id3, d1 in gamelog["players"].items():
+    for user1_id3, user2_id3 in itertools.combinations(gamelog["players"], 2):
         if user1_id3 not in teammate_counts:
             teammate_counts[user1_id3] = {}
+        if user2_id3 not in teammate_counts:
+            teammate_counts[user2_id3] = {}
 
-        for user2_id3, d2 in gamelog["players"].items():
-            if d1["team"] == d2["team"] and user1_id3 != user2_id3:
-                if user2_id3 in teammate_counts[user1_id3]:
-                    teammate_counts[user1_id3][user2_id3] += 1
-                else:
-                    teammate_counts[user1_id3][user2_id3] = 1
+        same_team = (gamelog["players"][user1_id3]["team"] ==
+                     gamelog["players"][user2_id3]["team"])
+
+        if not same_team:
+            continue
+
+        if user1_id3 in teammate_counts[user2_id3]:
+            teammate_counts[user2_id3][user1_id3] += 1
+        else:
+            teammate_counts[user2_id3][user1_id3] = 1
+
+        if user2_id3 in teammate_counts[user1_id3]:
+            teammate_counts[user1_id3][user2_id3] += 1
+        else:
+            teammate_counts[user1_id3][user2_id3] = 1
 
 
 def get_midfight_survival(gamelog, med_id3):  # type: (Dict, str) -> Optional[Tuple]
