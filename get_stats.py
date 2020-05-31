@@ -7,7 +7,7 @@ the game_logs.json file.
 import json
 import copy
 import datetime
-from typing import Dict
+from typing import Dict, Tuple, Optional
 from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
 import jinja2
@@ -20,9 +20,11 @@ classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
               "engineer", "demoman", "heavyweapons"]
 base_stats = ["kills", "assists", "deaths", "dmg", "dt", "total_time", "heal"]
 
-base_player = {cname:{k:0 for k in base_stats} for cname in classnames}
+base_player = {cname: {k: 0 for k in base_stats} for cname in classnames}
 base_player["medic"]["drops"] = 0
 base_player["medic"]["ubers"] = 0
+base_player["medic"]["mid_escapes"] = 0
+base_player["medic"]["mid_deaths"] = 0
 base_player["sniper"]["headshots_hit"] = 0
 base_player["spy"]["backstabs"] = 0
 
@@ -41,6 +43,31 @@ def count_teammates(gamelog):
                     teammate_counts[user1_id3][user2_id3] += 1
                 else:
                     teammate_counts[user1_id3][user2_id3] = 1
+
+
+def get_midfight_survival(gamelog, med_id3):  # type: (Dict, str) -> Optional[Tuple]
+    game_map = gamelog["info"]["map"]
+    if not game_map.startswith("koth_") and not game_map.startswith("cp_"):
+        return None
+    midfight_deaths = 0  # type: int
+    midfight_escapes = 0  # type: int
+    for r in gamelog["rounds"]:
+        med_round = any([a for a in r["events"]
+                         if a["type"] in {"medic_death", "charge"}
+                         and a["steamid"] == med_id3])
+        if not med_round:
+            continue
+
+        events = [a for a in r["events"] if a["type"] == "pointcap" or
+                  (a["type"] == "medic_death" and a["steamid"] == med_id3)]
+        if not events:
+            # the game ended before pointcap
+            midfight_escapes += 1
+        elif events[0]["type"] == "pointcap":
+            midfight_escapes += 1
+        else:
+            midfight_deaths += 1
+    return (midfight_escapes, midfight_deaths)
 
 
 with open("player_scores.csv", encoding="utf-8") as f:
@@ -66,7 +93,7 @@ with open("game_logs.json") as game_logs:
 
         if oldest_log:
             oldest_log = min(oldest_log, upload_date)
-        else: 
+        else:
             oldest_log = upload_date
 
         # getting usernames
@@ -81,16 +108,23 @@ with open("game_logs.json") as game_logs:
                 stats[id3] = copy.deepcopy(base_player)
 
             for c in d["class_stats"]:
-                if c["type"] not in classnames:
-                    continue
-                elif c["type"] == "medic":
+                if c["type"] == "medic":
                     stats[id3]["medic"]["drops"] += d["drops"]
-                    if "medigun" in d["ubertypes"]: 
-                            stats[id3]["medic"]["ubers"] += d["ubertypes"]["medigun"]
+                    if "medigun" in d["ubertypes"]:
+                        stats[id3]["medic"]["ubers"] += d["ubertypes"]["medigun"]
+
+                    mfs = get_midfight_survival(g, id3)
+                    if mfs:
+                        mid_escapes, mid_deaths = mfs
+                        stats[id3]["medic"]["mid_escapes"] += mid_escapes
+                        stats[id3]["medic"]["mid_deaths"] += mid_deaths
                 elif c["type"] == "sniper":
                     stats[id3]["sniper"]["headshots_hit"] += d["headshots_hit"]
                 elif c["type"] == "spy":
                     stats[id3]["spy"]["backstabs"] += d["backstabs"]
+                elif c["type"] not in classnames:
+                    continue
+
                 stats[id3][c["type"]]["kills"] += c["kills"]
                 stats[id3][c["type"]]["assists"] += c["assists"]
                 stats[id3][c["type"]]["deaths"] += c["deaths"]
@@ -102,7 +136,6 @@ with open("game_logs.json") as game_logs:
 
                 estimated_dt = d["dt"] * c["total_time"] / game_time
                 stats[id3][c["type"]]["dt"] += estimated_dt
-
 
 
 search_dict = {n: str(SteamID(i).as_64) for i, n
@@ -159,6 +192,11 @@ for id3, s in stats.items():
         drops_to_ubers = (float("nan") if s["medic"]["drops"] == 0
                           else s["medic"]["ubers"] / s["medic"]["drops"])
         advanced_stats.append(("ubers / drops", drops_to_ubers))
+
+        if s["medic"]["mid_escapes"] or s["medic"]["mid_deaths"]:
+            midfights = s["medic"]["mid_escapes"] + s["medic"]["mid_deaths"]
+            survival_pct = 100 * s["medic"]["mid_escapes"] / midfights
+            advanced_stats.append(("Midfight Survival %", survival_pct))
 
     if "sniper" in s and s["sniper"]["total_time"] > 2 * 60:
         M = s["sniper"]["total_time"] / 60
