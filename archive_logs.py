@@ -16,12 +16,14 @@ from typing import Set
 SLEEP_TIME = 3
 SEASON = datetime.now() - timedelta(days=60)
 
-comp_maps = set()
-with open("comp_maps.txt", encoding="utf-8") as f:
-    for line in f:
-        if not line:
-            continue
-        comp_maps.add(line.strip())
+
+def is_compmap(name):
+    """
+    Tf2 maps have prefixes which tell the map types.  Control points (cp_),
+    payload (pl), and king of the hill (koth_), are the only map types
+    played competitively.
+    """
+    return name.startswith("cp_") or name.startswith("pl_") or name.startswith("koth_")
 
 
 def get_game_ids():
@@ -30,12 +32,12 @@ def get_game_ids():
     This function filters out games with casual maps, using
     a competitive map whitelist.
     """
-    id_url = "https://logs.tf/api/v1/log?limit=2000"
+    id_url = "https://logs.tf/api/v1/log?limit=9000"
     try:
         id_request = request.urlopen(id_url, timeout=10)
         game_search = json.loads(id_request.read().decode("utf-8"))
         for game_log in game_search["logs"]:
-            if game_log["map"] in comp_maps and game_log["date"] >= SEASON.timestamp():
+            if is_compmap(game_log["map"]) and game_log["date"] >= SEASON.timestamp():
                 yield game_log["id"]
         time.sleep(SLEEP_TIME)
     except URLError as e:
