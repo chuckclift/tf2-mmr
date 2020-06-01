@@ -58,6 +58,11 @@ def count_teammates(gamelog):
 
 
 def get_midfight_survival(gamelog, med_id3):  # type: (Dict, str) -> Optional[Tuple]
+    """
+    gets the midfight survivals and the midfight deaths from a gamelog for a 
+    medic player.  If the map isn't a koth or control points map, it returns
+    None because other map types like payload do not have midfights.
+    """
     game_map = gamelog["info"]["map"]
     if not game_map.startswith("koth_") and not game_map.startswith("cp_"):
         return None
