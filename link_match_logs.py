@@ -10,6 +10,7 @@ from steam.steamid import SteamID  # type: ignore
 
 DAY = timedelta(days=1)
 
+
 class Tf2Format(Enum):
     fours = 1
     sixes = 2
@@ -102,8 +103,6 @@ if __name__ == "__main__":
             else:
                 match_dates[md + DAY] = {rgl_match.id}
 
-
-
         if rgl_match.team1 in team_format:
             match_format = team_format[rgl_match.team1]
         elif rgl_match.team2 in team_format:
@@ -137,7 +136,6 @@ if __name__ == "__main__":
         blue_roster = {get_id64(i) for i in logstf["players"]
                        if logstf["players"][i]["team"] == "Blue"}
 
-
         valid_rosters = [i for i in rgl_possible_matches
                          if i.team1 in roster and i.team2 in roster]
         valid_games = [pm for pm in valid_rosters
@@ -150,7 +148,7 @@ if __name__ == "__main__":
             else:
                 possible_logs[vg.id] = {logstf["id"]}
 
-    with open("rgl_match_logs.csv", "a", encoding="utf-8") as f: 
-        for rgl_id, log_ids in possible_logs.items(): 
-            for log_id in log_ids: 
+    with open("rgl_match_logs.csv", "a", encoding="utf-8") as f:
+        for rgl_id, log_ids in possible_logs.items():
+            for log_id in log_ids:
                 f.write("{},{}\n".format(rgl_id, log_id))

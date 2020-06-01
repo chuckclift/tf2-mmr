@@ -53,7 +53,7 @@
 <p><b>DA / M </b>: Damage per Minute</p>
 <p><b>DT / M </b>: Damage taken  per Minute</p>
 <p><b>DS </b>: Damage Surplus ( DA/M - DT/M )</p>
-<p>log data from {{ oldest }} to {{ newest }}</p>
+<p>log data from {{ oldest.strftime('%Y-%m-%d') }} to {{ newest.strftime('%Y-%m-%d') }}</p>
 <p>{{ players }} players found</p>
 <p>{{ games }} games analyzed</p>
 </div>
