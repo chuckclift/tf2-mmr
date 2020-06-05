@@ -8,20 +8,24 @@ import json
 import copy
 import datetime
 import itertools
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Any, Union, List
 from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
 import jinja2
 
 player_mmr = {}  # type: Dict[int, float]
-stats = {}  # type: Dict[str, Dict]
+stats = {}  # type: Dict[str, Dict[str, Any]]
 player_names = {}  # type: Dict[str, str]
 teammate_counts = {}  # type: Dict[str, Dict[str, int]]
 classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
               "engineer", "demoman", "heavyweapons"]
 base_stats = ["kills", "assists", "deaths", "dmg", "dt", "total_time", "heal"]
 
-base_player = {cname: {k: 0 for k in base_stats} for cname in classnames}
+StatVal = Union[int, float, List]
+
+base_player = {cname: {k: 0 for k in base_stats} for cname in classnames}  # type: Dict[str, Dict[str, StatVal]]
+for cnm in classnames:
+    base_player[cnm]["game_dpm"] = []
 base_player["medic"]["drops"] = 0
 base_player["medic"]["ubers"] = 0
 base_player["medic"]["mid_escapes"] = 0
@@ -147,6 +151,8 @@ with open("game_logs.json") as game_logs:
                 stats[id3][c["type"]]["deaths"] += c["deaths"]
                 stats[id3][c["type"]]["dmg"] += c["dmg"]
                 stats[id3][c["type"]]["total_time"] += c["total_time"]
+                if c["total_time"]:
+                    stats[id3][c["type"]]["game_dpm"].append(c["dmg"] / c["total_time"])
 
                 estimated_heal = d["heal"] * c["total_time"] / game_time
                 stats[id3][c["type"]]["heal"] += estimated_heal
@@ -161,12 +167,12 @@ search_dict = {n: str(SteamID(i).as_64) for i, n
 with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
     usernames_file.write("var usernames = " + json.dumps(search_dict) + ";")
 
+with open("html/usernames.json", "w", encoding="utf-8") as usernames_json:
+    usernames_json.write(json.dumps(search_dict))
 
 jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader("templates"),
                                autoescape=True)
 profile_template = jinja_env.get_template("profile.html")
-
-
 class_stat = namedtuple("class_stat", "name kpm depm kapd dpm dtpm ds hrs")
 
 

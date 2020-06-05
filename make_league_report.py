@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 
 from typing import Set, Dict, List, Any
+import math
 import jinja2
 from get_rgl_matches import read_player_entries
 
 # p.id, player_join_date, player_leave_date, tid, rid, team_seasons[tid], league_id))
 
-seasons = {} # type: Dict[int, str]
+seasons = {}  # type: Dict[int, str]
 with open("rgl_seasons.csv", encoding="utf-8") as f:
     for line in f:
         season_id, season_name = line.split(",")
         seasons[int(season_id)] = season_name.strip()
 
-teams = {} # type: Dict[int, str]
+teams = {}  # type: Dict[int, str]
 with open("rgl_teams.csv", encoding="utf-8") as f:
     for line in f:
         i, n = line.split(",")
         teams[int(i)] = n.strip()
 
-league_names = {} # type: Dict[int, str]
+league_names = {}  # type: Dict[int, str]
 with open("rgl_leagues.csv", encoding="utf-8") as f:
     for line in f:
         if not line:
@@ -26,7 +27,7 @@ with open("rgl_leagues.csv", encoding="utf-8") as f:
         lid, lname = line.split(",")
         league_names[int(lid)] = lname.strip()
 
-usernames = {} # type: Dict[int, str]
+usernames = {}  # type: Dict[int, str]
 with open("rgl_users.csv", encoding="utf-8") as f:
     for line in f:
         if not line:
@@ -34,7 +35,7 @@ with open("rgl_users.csv", encoding="utf-8") as f:
         uid, name = line.split(",")
         usernames[int(uid)] = name.strip()
 
-user_mmr = {} # type: Dict[int, float]
+user_mmr = {}  # type: Dict[int, float]
 with open("player_scores.csv", encoding="utf-8") as f:
     for line in f:
         if not line:
@@ -44,7 +45,7 @@ with open("player_scores.csv", encoding="utf-8") as f:
 
 
 season_teams = {}   # type: Dict[int, Set]
-season_leagues = {} # type: Dict[int, Set]
+season_leagues = {}  # type: Dict[int, Set]
 team_leagues = {}   # type: Dict[int, int]
 team_players = {}   # type: Dict[int, Set[int]]
 league_teams = {}   # type: Dict[int, Set[int]]
@@ -67,44 +68,51 @@ for p in player_entries:
     season_leagues[p.season_id].add(p.league_id)
     league_teams[p.league_id].add(p.team_id)
 
-season_profiles = [] # type: List[Dict]
+
+def get_player(pid):
+    mmr = float("nan") if pid not in user_mmr else user_mmr[pid]
+    name = "Unnamed" if pid not in usernames else usernames[pid]
+    return (mmr, pid, name)
+
+
+season_profiles = []  # type: List[Dict]
 for s, team_set in season_teams.items():
-    season = {} # type: Dict[str, Any]
+    season = {}  # type: Dict[str, Any]
     season["id"] = s
     season["name"] = seasons[s]
     season["leagues"] = []
-    print("season id:", s, "season name:", seasons[s])
+    season_profiles.append(season)
     for season_league in season_leagues[s]:
-        print(seasons[s], league_names[season_league])
-        league = {} # type: Dict[str, Any]
+        league = {}  # type: Dict[str, Any]
         league["id"] = season_league
         league["name"] = league_names[season_league]
-        league_scores = [] # type: List[float]
+        league_scores = []  # type: List[float]
         league["teams"] = []
-        for tid in  league_teams[season_league]:
+        season["leagues"].append(league)
+
+        for tid in league_teams[season_league]:
             team = {}  # type: Dict[str, Any]
             team["id"] = tid
-            team["name"] = teams[tid]
-            team["players"] = []
-
-            for pid in team_players[tid]:
-                player_mmr = float("nan") if pid not in user_mmr else user_mmr[pid]
-                player_name = "Unnamed" if pid not in usernames else usernames[pid]
-                team["players"].append((player_mmr, pid, player_name))
-                if player_mmr:
-                    league_scores.append(player_mmr)
+            team["name"] = "UNKNOWN" if tid not in teams else teams[tid]
+            players = [get_player(i) for i in team_players[tid]]
+            team["players"] = [i for i in players if not math.isnan(i[0])]
+            league_scores += [i[0] for i in team["players"]]
             team["players"].sort(reverse=True)
             top6_players = team["players"] if len(team["players"]) < 6 else team["players"][:6]
             team["top6"] = sum([i[0] for i in top6_players])
             league["teams"].append(team)
+            league["teams"].sort(reverse=True, key=lambda x: x["top6"])
 
         league_scores.sort(reverse=True)
-        valid_scores = [a for a in league_scores if a]
-        middle_entry = len(valid_scores) / 2
-        league["median"] = valid_scores[int(middle_entry)]
-        league["teams"].sort(reverse=True, key=lambda x: x["top6"])
-        season["leagues"].append(league)
-    season_profiles.append(season)
+
+        league["median"] = float("nan")
+        valid_scores = [a for a in league_scores if not math.isnan(a)]
+        if len(valid_scores) > 2:
+            middle_entry = len(valid_scores) / 2
+            league["median"] = valid_scores[int(middle_entry)]
+    season["leagues"].sort(reverse=True, key=lambda x: x["median"])
+
+print(len(season_profiles), "seasons found")
 
 
 season_profiles.sort(reverse=True, key=lambda x: x["id"])

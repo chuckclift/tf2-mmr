@@ -1,0 +1,50 @@
+{% extends "base.html" %} 
+{% block title %}  Search Player Stats {% endblock %}
+
+{% block content %}
+<div style='background-color:white; margin:20px; padding:10px;'>
+	<input type="text" width=400 id="searchbox"  />
+	<button onclick=search()> Search </button>
+</div>
+<div style='background-color:white; margin:20px; padding:10px;' id="results" hidden>
+</div>
+<script>
+
+var usernames = {};
+var username_req = new XMLHttpRequest();
+username_req.responseType = 'json';
+username_req.open('GET', '/usernames.json', true);
+username_req.onload = function() {
+	usernames = username_req.response;
+};
+username_req.send(null);
+function search() {
+var query = document.getElementById("searchbox").value.toLowerCase();
+var results = document.getElementById("results"); 
+
+// clearing results 
+while (results.firstChild) {
+	results.removeChild(results.firstChild);
+}
+Object.keys(usernames).forEach(function(key) { 
+	var lower_key = key.toLowerCase();
+	if (lower_key.indexOf(query) !== -1) {
+		var atag = document.createElement("a");
+		atag.innerText = key;
+		var link = "/players/" + usernames[key] + ".html"
+		atag.setAttribute("href", link);
+		var ptag = document.createElement("p");
+		ptag.appendChild(atag);
+		results.appendChild(ptag);
+	}
+});
+	results.hidden = false;  
+}
+
+document.getElementById('searchbox').addEventListener('keydown', (e) => {
+	if (e.key === 'Enter') {
+		search(); 
+	}
+});
+</script>
+{% endblock %}
