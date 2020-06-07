@@ -314,6 +314,10 @@ def main():
                                                         m.team2, m.team2_score,
                                                         date_cell, map_cell))
 
+    with open("rgl_seasons.csv", "w", encoding="utf-8") as f:
+        for sid, name in seasons.items():
+            f.write("{},{}\n".format(sid, name.replace(",", " ")))
+
     with open("rgl_teams.csv", "w", encoding="utf-8") as f:
         for t, n in team_names.items():
             f.write("{},{}\n".format(t, n.replace(",", " ")))
