@@ -12,6 +12,7 @@ from typing import Dict, Tuple, Optional, Any, Union, List
 from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
 import jinja2
+import link_match_logs
 
 player_mmr = {}  # type: Dict[int, float]
 stats = {}  # type: Dict[str, Dict[str, Any]]
@@ -50,15 +51,9 @@ def count_teammates(gamelog):
         if not same_team:
             continue
 
-        if user1_id3 in teammate_counts[user2_id3]:
-            teammate_counts[user2_id3][user1_id3] += 1
-        else:
-            teammate_counts[user2_id3][user1_id3] = 1
-
-        if user2_id3 in teammate_counts[user1_id3]:
-            teammate_counts[user1_id3][user2_id3] += 1
-        else:
-            teammate_counts[user1_id3][user2_id3] = 1
+        games_together = teammate_counts[user1_id3].get(user2_id3, 0) + 1
+        teammate_counts[user1_id3][user2_id3] = games_together
+        teammate_counts[user2_id3][user1_id3] = games_together
 
 
 def get_midfight_survival(gamelog, med_id3):  # type: (Dict, str) -> Optional[Tuple]
@@ -101,6 +96,9 @@ with open("player_scores.csv", encoding="utf-8") as f:
 newest_log = None  # pylint: disable=C0103
 oldest_log = None  # pylint: disable=C0103
 games_played = 0  # pylint: disable=C0103
+
+log_matches = {logstf:rglmatch for logstf, rglmatch in
+               link_match_logs.read_rgl_match_logs()} # type: Dict[int, int]
 
 with open("game_logs.json") as game_logs:
     for line in game_logs:

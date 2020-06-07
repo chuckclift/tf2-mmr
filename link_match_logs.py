@@ -27,6 +27,16 @@ def read_region_formats():  # type: () -> Dict[int, Tf2Format]
     return region_formats
 
 
+def read_rgl_match_logs(): # type: () -> List[Tuple[int, int]]
+    values = []
+    with open("rgl_match_logs.csv", "a", encoding="utf-8") as f:
+        for line in f:
+            if not line:
+                continue
+            rgl_id, log_id = line.split(",")
+            values.append((int(rgl_id), int(log_id)))
+
+
 def get_format(gamelog):  # type: (Dict) -> Tf2Format
     game_seconds = gamelog["length"]
     gamer_seconds = 0
