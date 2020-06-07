@@ -1,3 +1,4 @@
 steam
 bs4
 trueskill
+Jinja2
