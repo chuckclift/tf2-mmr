@@ -172,9 +172,6 @@ with open("game_logs.json") as game_logs:
 search_dict = {n: str(SteamID(i).as_64) for i, n
                in player_names.items()}  # type: Dict[str, str]
 
-with open("html/usernames.js", "w", encoding="utf-8") as usernames_file:
-    usernames_file.write("var usernames = " + json.dumps(search_dict) + ";")
-
 with open("html/usernames.json", "w", encoding="utf-8") as usernames_json:
     usernames_json.write(json.dumps(search_dict))
 
