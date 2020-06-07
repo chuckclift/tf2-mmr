@@ -37,9 +37,9 @@ base_player["spy"]["backstabs"] = 0
 MatchLogCombo = NamedTuple("MatchLogCombo", [("logs_tf_id", int),
                                              ("rgl_id", int)])
 
-player_matches = {} # type: Dict[str, List[Tuple[int, int]]]
-log_matches = {logstf:rglmatch for logstf, rglmatch in
-               link_match_logs.read_rgl_match_logs()} # type: Dict[int, int]
+player_matches = {}  # type: Dict[str, List[Tuple[int, int]]]
+log_matches = {logstf: rglmatch for rglmatch, logstf in
+               link_match_logs.read_rgl_match_logs()}  # type: Dict[int, int]
 
 
 def count_teammates(gamelog):
@@ -123,9 +123,11 @@ with open("game_logs.json") as game_logs:
         # getting usernames
         for id3, name in g["names"].items():
             player_names[id3] = name
-            if id3 not in player_matches:
-                player_matches[id3] = []
-            player_matches[id3].append(MatchLogCombo(g["id"], log_matches[g["id"]]))
+
+            if g["id"] in log_matches:
+                if id3 not in player_matches:
+                    player_matches[id3] = []
+                player_matches[id3].append(MatchLogCombo(g["id"], log_matches[g["id"]]))
 
         count_teammates(g)
         game_time = g["info"]["total_length"]
@@ -238,6 +240,9 @@ for id3, s in stats.items():
 
     profile_filename = "html/players/{}.html".format(SteamID(id3).as_64)
     with open(profile_filename, "w", encoding="utf-8") as html_profile:
+        player_rgl_matches = []
+        if id3 in player_matches:
+            player_rgl_matches = player_matches[id3]
         html_profile.write(profile_template.render(username=player_names[id3],
                                                    mmr=mmr,
                                                    classstats=player_class_stats,
@@ -245,6 +250,6 @@ for id3, s in stats.items():
                                                    teammates=teammate_names,
                                                    games=games_played,
                                                    players=len(player_mmr),
-                                                   rgl_matches=player_matches[id3],
+                                                   rgl_matches=player_rgl_matches,
                                                    oldest=oldest_log,
                                                    newest=newest_log))

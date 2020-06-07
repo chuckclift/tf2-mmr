@@ -27,10 +27,10 @@ def read_region_formats():  # type: () -> Dict[int, Tf2Format]
     return region_formats
 
 
-def read_rgl_match_logs(): # type: () -> List[Tuple[int, int]]
+def read_rgl_match_logs():  # type: () -> List[Tuple[int, int]]
     values = []
-    with open("rgl_match_logs.csv", "a", encoding="utf-8") as f:
-        for line in f:
+    with open("rgl_match_logs.csv", encoding="utf-8") as rml:
+        for line in rml:
             if not line:
                 continue
             rgl_id, log_id = line.split(",")
