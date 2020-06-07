@@ -35,6 +35,7 @@ def read_rgl_match_logs(): # type: () -> List[Tuple[int, int]]
                 continue
             rgl_id, log_id = line.split(",")
             values.append((int(rgl_id), int(log_id)))
+    return values
 
 
 def get_format(gamelog):  # type: (Dict) -> Tf2Format

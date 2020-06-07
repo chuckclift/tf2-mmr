@@ -45,6 +45,16 @@
 <p><a href="/players/{{ tm[1] }}.html"> {{ tm[0] }} </a></p>
 {% endfor %}
 </div>
+{% if rgl_matches %}
+<div class="content">
+	{% for r in rgl_matches %}
+	<p>
+	   <a href="https://logs.tf/{{ r.logs_tf_id }}">logs.tf log</a> 
+	   <a href="https://rgl.gg/Public/Match.aspx?m={{ r.rgl_id }}">rgl log</a>
+	</p>
+	{% endfor %}
+</div>
+{% endif %}
 <div class="content">
 <h2>Glossary</h2>
 <p><b>K / M </b> : Kills per Minute</p>

@@ -8,7 +8,7 @@ import json
 import copy
 import datetime
 import itertools
-from typing import Dict, Tuple, Optional, Any, Union, List
+from typing import Dict, Tuple, Optional, Any, Union, List, NamedTuple
 from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
 import jinja2
@@ -33,6 +33,13 @@ base_player["medic"]["mid_escapes"] = 0
 base_player["medic"]["mid_deaths"] = 0
 base_player["sniper"]["headshots_hit"] = 0
 base_player["spy"]["backstabs"] = 0
+
+MatchLogCombo = NamedTuple("MatchLogCombo", [("logs_tf_id", int),
+                                             ("rgl_id", int)])
+
+player_matches = {} # type: Dict[str, List[Tuple[int, int]]]
+log_matches = {logstf:rglmatch for logstf, rglmatch in
+               link_match_logs.read_rgl_match_logs()} # type: Dict[int, int]
 
 
 def count_teammates(gamelog):
@@ -97,8 +104,6 @@ newest_log = None  # pylint: disable=C0103
 oldest_log = None  # pylint: disable=C0103
 games_played = 0  # pylint: disable=C0103
 
-log_matches = {logstf:rglmatch for logstf, rglmatch in
-               link_match_logs.read_rgl_match_logs()} # type: Dict[int, int]
 
 with open("game_logs.json") as game_logs:
     for line in game_logs:
@@ -118,6 +123,9 @@ with open("game_logs.json") as game_logs:
         # getting usernames
         for id3, name in g["names"].items():
             player_names[id3] = name
+            if id3 not in player_matches:
+                player_matches[id3] = []
+            player_matches[id3].append(MatchLogCombo(g["id"], log_matches[g["id"]]))
 
         count_teammates(g)
         game_time = g["info"]["total_length"]
@@ -237,5 +245,6 @@ for id3, s in stats.items():
                                                    teammates=teammate_names,
                                                    games=games_played,
                                                    players=len(player_mmr),
+                                                   rgl_matches=player_matches[id3],
                                                    oldest=oldest_log,
                                                    newest=newest_log))
