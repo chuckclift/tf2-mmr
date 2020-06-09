@@ -32,12 +32,16 @@ base_player["medic"]["ubers"] = 0
 base_player["medic"]["mid_escapes"] = 0
 base_player["medic"]["mid_deaths"] = 0
 base_player["sniper"]["headshots_hit"] = 0
+base_player["sniper"]["sniper_kills"] = 0
+base_player["sniper"]["deaths_to_sniper"] = 0
 base_player["spy"]["backstabs"] = 0
 
 MatchLogCombo = NamedTuple("MatchLogCombo", [("logs_tf_id", int),
-                                             ("rgl_id", int)])
+                                             ("rgl_id", int),
+                                             ("map", str),
+                                             ("season", str)])
 
-player_matches = {}  # type: Dict[str, List[Tuple[int, int]]]
+player_matches = {}  # type: Dict[str, List[MatchLogCombo]]
 log_matches = {logstf: rglmatch for rglmatch, logstf in
                link_match_logs.read_rgl_match_logs()}  # type: Dict[int, int]
 
@@ -127,7 +131,10 @@ with open("game_logs.json") as game_logs:
             if g["id"] in log_matches:
                 if id3 not in player_matches:
                     player_matches[id3] = []
-                player_matches[id3].append(MatchLogCombo(g["id"], log_matches[g["id"]]))
+                player_matches[id3].append(MatchLogCombo(g["id"],
+                                                         log_matches[g["id"]],
+                                                         g["info"]["map"],
+                                                         "Unknown Season"))
 
         count_teammates(g)
         game_time = g["info"]["total_length"]
@@ -149,6 +156,12 @@ with open("game_logs.json") as game_logs:
                         stats[id3]["medic"]["mid_deaths"] += mid_deaths
                 elif c["type"] == "sniper":
                     stats[id3]["sniper"]["headshots_hit"] += d["headshots_hit"]
+
+                    # these stats are used for killing sniper vs sniper k/d ratio
+                    sniper_kills = g["classkills"].get(id3, {}).get("sniper", 0)
+                    deaths_to_sniper = g["classdeaths"].get(id3, {}).get("sniper", 0)
+                    stats[id3]["sniper"]["sniper_kills"] += sniper_kills
+                    stats[id3]["sniper"]["deaths_to_sniper"] += deaths_to_sniper
                 elif c["type"] == "spy":
                     stats[id3]["spy"]["backstabs"] += d["backstabs"]
                 elif c["type"] not in classnames:
@@ -231,15 +244,21 @@ for id3, s in stats.items():
         advanced_stats.append(
             ("headshots / M", s["sniper"]["headshots_hit"] / M))
 
+        if s["sniper"]["deaths_to_sniper"] == 0:
+            svs = float("nan")
+        else:
+            svs = (s["sniper"]["sniper_kills"] / s["sniper"]["deaths_to_sniper"])
+        advanced_stats.append(("SvS", svs))
+
+
+
     if "spy" in s and s["spy"]["total_time"] > 2 * 60:
         M = s["spy"]["total_time"] / 60
         advanced_stats.append(("backstabs / M", s["spy"]["backstabs"] / M))
 
     profile_filename = "html/players/{}.html".format(SteamID(id3).as_64)
     with open(profile_filename, "w", encoding="utf-8") as html_profile:
-        player_rgl_matches = []
-        if id3 in player_matches:
-            player_rgl_matches = player_matches[id3]
+        player_rgl_matches = player_matches.get(id3, [])
         html_profile.write(profile_template.render(username=player_names[id3],
                                                    mmr=mmr,
                                                    classstats=player_class_stats,

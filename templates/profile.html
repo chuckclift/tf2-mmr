@@ -50,6 +50,8 @@
 	<b>Rgl Matches</b>
 	{% for r in rgl_matches %}
 	<p>
+	   {{ r.map }}
+	   {{ r.season }}
 	   <a href="https://logs.tf/{{ r.logs_tf_id }}">logs.tf log</a> 
 	   <a href="https://rgl.gg/Public/Match.aspx?m={{ r.rgl_id }}">rgl log</a>
 	</p>
@@ -64,6 +66,7 @@
 <p><b>DA / M </b>: Damage per Minute</p>
 <p><b>DT / M </b>: Damage taken  per Minute</p>
 <p><b>DS </b>: Damage Surplus ( DA/M - DT/M )</p>
+<p><b>SvS </b>: kills on enemy sniper / deaths to enemy sniper</p>
 <p>log data from {{ oldest.strftime('%Y-%m-%d') }} to {{ newest.strftime('%Y-%m-%d') }}</p>
 <p>{{ players }} players found</p>
 <p>{{ games }} games analyzed</p>
