@@ -45,6 +45,12 @@
 <p><a href="/players/{{ tm[1] }}.html"> {{ tm[0] }} </a></p>
 {% endfor %}
 </div>
+<div class="content">
+	<b>Lifetime Stats</b>
+	{% for ls in lifetime_stats %}
+		<p><b>{{ ls[0] }} </b> {{ ls[1] | round(0) }}</p>
+	{% endfor %}
+</div>
 {% if rgl_matches %}
 <div class="content">
 	<b>Rgl Matches</b>
