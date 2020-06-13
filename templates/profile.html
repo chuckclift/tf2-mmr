@@ -48,14 +48,36 @@
 {% if rgl_matches %}
 <div class="content">
 	<b>Rgl Matches</b>
-	{% for r in rgl_matches %}
 	<p>
-	   {{ r.map }}
-	   {{ r.season }}
-	   <a href="https://logs.tf/{{ r.logs_tf_id }}">logs.tf log</a> 
-	   <a href="https://rgl.gg/Public/Match.aspx?m={{ r.rgl_id }}">rgl log</a>
+	     <b>record</b>  
+	     {{ rgl_matches | selectattr("win") | list | count }}  - 
+	     {{ rgl_matches | count -  rgl_matches | selectattr("win") | list | count }}
 	</p>
+	<table>
+	<tr>
+	<th>Season</th>
+	<th>Map</th>
+	<th>logs.tf Match</th>
+	<th>RGL Match </th>
+	<th>Result</th>
+	</tr>
+	{% for r in rgl_matches %}
+	<tr>
+		<td>{{ r.season }}</td>
+		<td>{{ r.map }}</td>
+		<td><a href="https://logs.tf/{{ r.logs_tf_id }}">logs.tf log</a> </td>
+		<td><a href="https://rgl.gg/Public/Match.aspx?m={{ r.rgl_id }}">RGL match</a></td>
+		<td>
+		{% if r.win %} 
+		<span style="color:green">Win</span> 
+		{% else %} 
+		<span style="color:red">Loss</span> 
+		{% endif %} 
+		</td>
+
+	</tr>
 	{% endfor %}
+	</table>
 </div>
 {% endif %}
 <div class="content">

@@ -54,7 +54,8 @@ RglMatch = NamedTuple("RglMatch", [("id", int),
                                    ("team1", int),
                                    ("team1_score", Optional[float]),
                                    ("team2", int),
-                                   ("team2_score", Optional[float])])
+                                   ("team2_score", Optional[float]),
+                                   ("season", Optional[int])])
 
 
 def read_player_entries():  # type: () -> List[RglPlayerEntry]
@@ -82,7 +83,7 @@ def read_player_entries():  # type: () -> List[RglPlayerEntry]
 
 
 def read_matches():  # type: () -> List[RglMatch]
-    csv_matches = []
+    csv_matches = []  # type: List[RglMatch]
     with open("matches.csv", encoding="utf-8") as f:
         for line in f:
             if not line:
@@ -103,13 +104,16 @@ def read_matches():  # type: () -> List[RglMatch]
             if not fields[5].strip() == "None":
                 match_date = datetime.fromtimestamp(float(fields[5]))
             maps = {m.strip() for m in fields[6].split(" ")}
+            csv_match_season_id = int(fields[7])
+
             csv_matches.append(RglMatch(int(fields[0]),  # match id
                                         match_date,
                                         maps,
                                         int(fields[1]),  # team 1
                                         team1_score,
                                         int(fields[3]),  # team 2
-                                        team2_score))
+                                        team2_score,
+                                        csv_match_season_id))
     return csv_matches
 
 
@@ -122,6 +126,21 @@ def read_teams():  # type: () -> Dict
             tid, name = line.split(",")
             rgl_teams[int(tid)] = name
     return rgl_teams
+
+
+def read_seasons():  # type: () -> Dict[int, str]
+    """
+    Reads the seasons contained in rgl_seasons.csv and returns
+    them as a dictionary mapping the ids to the names.
+    """
+    csv_seasons = {}
+    with open("rgl_seasons.csv", encoding="utf-8") as f:
+        for line in f:
+            if not line:
+                continue
+            season_id, season_name = line.split(",")
+            csv_seasons[int(season_id)] = season_name
+    return csv_seasons
 
 
 def row_to_player(tr):  # type: (bs4.element.Tag) -> Optional[RglPlayer]
@@ -160,7 +179,7 @@ def row_to_player(tr):  # type: (bs4.element.Tag) -> Optional[RglPlayer]
     return RglPlayer(player_id, player_name, joined, left)
 
 
-def row_to_match(tr):  # type: (bs4.element.Tag) -> Optional[RglMatch]
+def row_to_match(tr, season_id):  # type: (bs4.element.Tag, int) -> Optional[RglMatch]
     """
     Extracts an RGL Match from the table row of a team page
     """
@@ -219,11 +238,12 @@ def row_to_match(tr):  # type: (bs4.element.Tag) -> Optional[RglMatch]
             match_dtime = datetime.strptime(
                 match_date.strip(), "%m/%d/%Y %I:%M %p")
     return RglMatch(match_id, match_dtime, match_maps, team1, team1_score,
-                    team2, team2_score)
+                    team2, team2_score, season_id)
 
 
 def main():
-    h = {"User-Agent": "Rgl Retriever"}
+    h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
+                       " (KHTML, like Gecko)"}
     r = Request("https://rgl.gg/Public/Regions.aspx", headers=h)
     response = urlopen(r).read().decode("utf-8")
     doc = bs4.BeautifulSoup(response, "html.parser")
@@ -262,8 +282,17 @@ def main():
                 team_regions[tid] = int(region_id_match.group(1))
 
     logging.info("{} team names found".format(len(team_names)))
+    with open("rgl_teams.csv", "w", encoding="utf-8") as f:
+        for t, n in team_names.items():
+            f.write("{},{}\n".format(t, n.replace(",", " ")))
+
     logging.info("{} regions found".format(len(team_regions)))
+
     logging.info("{} seasons found".format(len(seasons)))
+    with open("rgl_seasons.csv", "w", encoding="utf-8") as f:
+        for sid, name in seasons.items():
+            f.write("{},{}\n".format(sid, name.replace(",", " ")))
+    return 0
 
     for tid, rid in team_regions.items():
         time.sleep(REQUEST_DELAY)
@@ -302,25 +331,30 @@ def main():
 
         match_rows = [tr for tr in team_doc.find_all("tr")
                       if tr.find("a", href=MATCH_RE)]  # type: List[Optional[RglMatch]]
-        matches = [row_to_match(tr) for tr in match_rows]
+        matches = [row_to_match(tr, team_seasons[tid]) for tr in match_rows]
         valid_matches = [m for m in matches if m]  # type: List[RglMatch]
+
         with open("matches.csv", "a", encoding="utf-8") as f:
             for m in valid_matches:
                 map_cell = " ".join(m.maps)
                 date_cell = "None"
                 if m.date:
                     date_cell = str(m.date.timestamp())
-                f.write("{},{},{},{},{},{},{}\n".format(m.id, m.team1, m.team1_score,
-                                                        m.team2, m.team2_score,
-                                                        date_cell, map_cell))
 
-    with open("rgl_seasons.csv", "w", encoding="utf-8") as f:
-        for sid, name in seasons.items():
-            f.write("{},{}\n".format(sid, name.replace(",", " ")))
+                # sometimes there are games with dead teams.  The dead teams
+                # don't show up on the league table page, so they are not
+                # associated with a season. If the first team is live, use
+                # its entry to find the season. If the second season is the
+                # live one, use its entry.
+                if m.team1 in team_seasons:
+                    match_season = team_seasons[m.team1]
+                else:
+                    match_season = team_seasons[m.team2]
 
-    with open("rgl_teams.csv", "w", encoding="utf-8") as f:
-        for t, n in team_names.items():
-            f.write("{},{}\n".format(t, n.replace(",", " ")))
+                f.write("{},{},{},{},{},{},{},{}\n".format(m.id, m.team1, m.team1_score,
+                                                           m.team2, m.team2_score,
+                                                           date_cell, map_cell,
+                                                           match_season))
 
     with open("rgl_leagues.csv", "w", encoding="utf-8") as f:
         for l, n in league_names.items():

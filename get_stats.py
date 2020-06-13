@@ -13,6 +13,7 @@ from collections import namedtuple
 from steam.steamid import SteamID  # type: ignore
 import jinja2
 import link_match_logs
+import get_rgl_matches
 
 player_mmr = {}  # type: Dict[int, float]
 stats = {}  # type: Dict[str, Dict[str, Any]]
@@ -20,7 +21,8 @@ player_names = {}  # type: Dict[str, str]
 teammate_counts = {}  # type: Dict[str, Dict[str, int]]
 classnames = ["soldier", "sniper", "medic", "scout", "spy", "pyro",
               "engineer", "demoman", "heavyweapons"]
-base_stats = ["kills", "assists", "deaths", "dmg", "dt", "total_time", "heal"]
+base_stats = ["wins", "losses", "draws", "kills", "assists", "deaths", "dmg",
+              "dt", "total_time", "heal"]
 
 StatVal = Union[int, float, List]
 
@@ -39,11 +41,27 @@ base_player["spy"]["backstabs"] = 0
 MatchLogCombo = NamedTuple("MatchLogCombo", [("logs_tf_id", int),
                                              ("rgl_id", int),
                                              ("map", str),
-                                             ("season", str)])
+                                             ("season", str),
+                                             ("win", bool)])
 
 player_matches = {}  # type: Dict[str, List[MatchLogCombo]]
-log_matches = {logstf: rglmatch for rglmatch, logstf in
-               link_match_logs.read_rgl_match_logs()}  # type: Dict[int, int]
+logs_tf_to_rgl = {logstf: rglmatch for rglmatch, logstf in
+                  link_match_logs.read_rgl_match_logs()}  # type: Dict[int, int]
+
+# matches rgl match id to the rgl season id
+rgl_match_seasons = {}  # type: Dict[int, int]
+for m in get_rgl_matches.read_matches():
+    if m.season:
+        rgl_match_seasons[m.id] = m.season
+
+
+rgl_seasons = {}  # type: Dict[int,str]
+with open("rgl_seasons.csv", encoding="utf-8") as f:
+    for line in f:
+        if not line:
+            continue
+        sid, sname = line.split(",")
+        rgl_seasons[int(sid)] = sname.strip()
 
 
 def count_teammates(gamelog):
@@ -59,12 +77,10 @@ def count_teammates(gamelog):
         same_team = (gamelog["players"][user1_id3]["team"] ==
                      gamelog["players"][user2_id3]["team"])
 
-        if not same_team:
-            continue
-
-        games_together = teammate_counts[user1_id3].get(user2_id3, 0) + 1
-        teammate_counts[user1_id3][user2_id3] = games_together
-        teammate_counts[user2_id3][user1_id3] = games_together
+        if same_team:
+            games_together = teammate_counts[user1_id3].get(user2_id3, 0) + 1
+            teammate_counts[user1_id3][user2_id3] = games_together
+            teammate_counts[user2_id3][user1_id3] = games_together
 
 
 def get_midfight_survival(gamelog, med_id3):  # type: (Dict, str) -> Optional[Tuple]
@@ -124,17 +140,35 @@ with open("game_logs.json") as game_logs:
         else:
             oldest_log = upload_date
 
-        # getting usernames
+        if  g["teams"]["Red"]["score"] == g["teams"]["Blue"]["score"]:
+            match_draw = True
+        elif  g["teams"]["Red"]["score"] > g["teams"]["Blue"]["score"]:
+            match_winner = "Red"
+        elif  g["teams"]["Red"]["score"] < g["teams"]["Blue"]["score"]:
+            match_winner = "Blue"
+
         for id3, name in g["names"].items():
+            # getting usernames
             player_names[id3] = name
 
-            if g["id"] in log_matches:
+            # updating rgl match info
+            if g["id"] in logs_tf_to_rgl:
                 if id3 not in player_matches:
                     player_matches[id3] = []
+                rgl_match_id = logs_tf_to_rgl[g["id"]]
+                rgl_season_id = rgl_match_seasons[rgl_match_id]
+
+
+                player_team = g["players"][id3]["team"]
+                enemy_team = "Red" if player_team == "Blue" else "Blue"
+                match_win = (g["teams"][player_team]["score"] > 
+                             g["teams"][enemy_team]["score"])
+
                 player_matches[id3].append(MatchLogCombo(g["id"],
-                                                         log_matches[g["id"]],
+                                                         rgl_match_id,
                                                          g["info"]["map"],
-                                                         "Unknown Season"))
+                                                         rgl_seasons[rgl_season_id],
+                                                         match_win))
 
         count_teammates(g)
         game_time = g["info"]["total_length"]
@@ -250,8 +284,6 @@ for id3, s in stats.items():
             svs = (s["sniper"]["sniper_kills"] / s["sniper"]["deaths_to_sniper"])
         advanced_stats.append(("SvS", svs))
 
-
-
     if "spy" in s and s["spy"]["total_time"] > 2 * 60:
         M = s["spy"]["total_time"] / 60
         advanced_stats.append(("backstabs / M", s["spy"]["backstabs"] / M))
@@ -266,6 +298,6 @@ for id3, s in stats.items():
                                                    teammates=teammate_names,
                                                    games=games_played,
                                                    players=len(player_mmr),
-                                                   rgl_matches=player_rgl_matches,
+                                                   rgl_matches=sorted(player_rgl_matches, reverse=True),
                                                    oldest=oldest_log,
                                                    newest=newest_log))
