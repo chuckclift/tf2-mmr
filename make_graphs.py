@@ -26,10 +26,13 @@ with open("player_scores.csv", encoding="utf-8") as f:
 print("league, max, min, avg")
 boxplot_data = []
 for l in league_names:
-    scores = [player_scores[i] for i in player_scores
-              if player_leagues[i] == l]
+    scores = [player_scores[i] for i in player_scores if player_leagues[i] == l]
     boxplot_data.append(scores)
-    print("{},{:.1f},{:.1f},{:.1f}".format(l, max(scores), min(scores), sum(scores)/len(scores)))
+    print(
+        "{},{:.1f},{:.1f},{:.1f}".format(
+            l, max(scores), min(scores), sum(scores) / len(scores)
+        )
+    )
 
 
 print(len(player_scores), "rgl players found")

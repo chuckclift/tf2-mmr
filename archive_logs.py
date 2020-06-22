@@ -67,7 +67,8 @@ for gid in get_game_ids():
     print("https://logs.tf/json/" + str(gid))
     try:
         details_request = request.urlopen(
-            "https://logs.tf/json/" + str(gid), timeout=10)
+            "https://logs.tf/json/" + str(gid), timeout=10
+        )
         game_details = json.loads(details_request.read().decode("utf-8"))
         del game_details["chat"]
         game_details["id"] = gid
