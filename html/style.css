@@ -6,9 +6,16 @@ td {
     width: 120px;
     padding:10px;
 }
+table {
+	border-collapse: collapse;
+}
+tr:nth-child(even) {
+	background-color: #f2f2f2;
+}
 th {
     text-align:left;
     padding:10px; 
+    border-bottom: 5px solid black;
 }
 .container {
     display:flex;

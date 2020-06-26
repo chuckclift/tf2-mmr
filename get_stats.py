@@ -283,6 +283,16 @@ for id3, s in stats.items():
         (player_names[tid3], SteamID(tid3).as_64) for _, tid3 in top_teammates
     ]
 
+
+    total_kills = sum([a["kills"] for _, a in s.items() ]) 
+    total_dmg =  sum([a["dmg"] for _, a in s.items() ]) 
+    total_dt = sum([a["dt"] for _, a in s.items() ])
+    total_ubers = s.get("medic", {}).get("ubers", 0)
+    lifetime_stats = [("Total Kills", total_kills),
+                      ("Total Damage", total_dmg),
+                      ("Total Damage Taken", total_dt),
+                      ("Total Ubers", total_ubers)]
+
     player_class_stats = []
     for classname, class_stats in sorted(
         s.items(), key=lambda x: x[1]["total_time"], reverse=True
@@ -311,6 +321,7 @@ for id3, s in stats.items():
     advanced_stats = []
     if "medic" in s and s["medic"]["total_time"] > 2 * 60:
         M = s["medic"]["total_time"] / 60
+        total_ubers += s["medic"]["ubers"]
         advanced_stats.append(("drops / M", s["medic"]["drops"] / M))
         advanced_stats.append(("ubers / M", s["medic"]["ubers"] / M))
 
