@@ -2,8 +2,11 @@
 
 import unittest
 import json
+import sqlite3
 from pprint import pprint
+from steam.steamid import SteamID
 from parse_logs import get_meds_dropped, get_user_class_stats
+import sql_commands
 
 with open("test/2596216.json", encoding="utf-8") as f:
     json_doc = json.loads(f.read())
@@ -13,6 +16,10 @@ red_med = "[U:1:101435715]"
 
 blue_demo = "[U:1:155433728]"
 
+for player in stats:
+    for c in stats[player]:
+        stats[player][c]["log_id"] = 2596216
+
 
 class ParseTest(unittest.TestCase):
     def testbasic(self):
@@ -21,6 +28,7 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(stats[red_med]["medic"]["kills"], 1)
         self.assertEqual(stats[red_med]["medic"]["dmg"], 60)
         self.assertEqual(stats[red_med]["medic"]["dt"], 1355)
+        self.assertEqual(stats[blue_demo]["demoman"]["heals_received"], 2448)
 
     def testclasskills(self):
         self.assertEqual(stats[blue_demo]["demoman"]["scout_kills"], 6)
@@ -31,6 +39,28 @@ class ParseTest(unittest.TestCase):
 
     def testdrop(self):
         self.assertEqual(2, get_meds_dropped(blue_demo, json_doc))
+
+
+class MakeDbTest(unittest.TestCase):
+    def testbasic(self):
+        con = sqlite3.connect(":memory:")
+        con.row_factory = sqlite3.Row
+
+        cur = con.cursor()
+        cur.execute(sql_commands.create_player_stats)
+        for id3 in stats:
+            for cn in stats[id3]:
+                cur.execute(sql_commands.insert_player_stats, stats[id3][cn])
+
+        for row in cur.execute("select * from PlayerStats;"):
+            pc += 1
+            keynames = [d[0] for d in cur.description]
+            id3 = SteamID(row["player_id"]).as_steam3
+            class_name = row["tf2_class"]
+            for k in keynames:
+                self.assertEqual(row[k], stats[id3][class_name][k])
+
+        con.close()
 
 
 if __name__ == "__main__":

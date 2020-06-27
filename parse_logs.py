@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import Dict, Union, Tuple, Optional
-from steam.steamid import SteamID
+from steam.steamid import SteamID # type: ignore
 
 id3_to_id64: Dict[str, int] = {}
 classnames = [
@@ -14,6 +14,12 @@ classnames = [
     "engineer",
     "demoman",
     "heavyweapons",
+]
+
+med_stats = [
+    "advantages_lost", "biggest_advantage_lost", "deaths_with_95_99_uber",
+    "deaths_within_20s_after_uber", "avg_time_before_healing",
+    "avg_time_to_build", "avg_time_before_using"
 ]
 
 
@@ -30,7 +36,7 @@ def get_meds_dropped(id3: str, game_log: Dict) -> int:
     meds_dropped = 0
 
     for r in game_log["rounds"]:
-        latest_drop = {}
+        latest_drop: Dict = {}
         for e in r["events"]:
             if e["type"] == "charge":
                 mediguns[e["steamid"]] = e["medigun"]
@@ -47,15 +53,15 @@ def get_meds_dropped(id3: str, game_log: Dict) -> int:
     return meds_dropped
 
 
-def get_midfight_survival(gamelog: Dict, med_id3: str) -> Optional[Tuple]:
+def get_midfight_survival( med_id3: str, gamelog: Dict) -> Tuple:
     """
     gets the midfight survivals and the midfight deaths from a gamelog for a
     medic player.  If the map isn't a koth or control points map, it returns
-    None because other map types like payload do not have midfights.
+    (0,0) because other map types like payload do not have midfights.
     """
     game_map = gamelog["info"]["map"]
     if not game_map.startswith("koth_") and not game_map.startswith("cp_"):
-        return None
+        return (0, 0)
     midfight_deaths = 0  # type: int
     midfight_escapes = 0  # type: int
     for r in gamelog["rounds"]:
@@ -80,6 +86,13 @@ def get_midfight_survival(gamelog: Dict, med_id3: str) -> Optional[Tuple]:
     return (midfight_escapes, midfight_deaths)
 
 
+def get_heals_received(id3: str, game_log: Dict) -> int:
+    heal_total = 0
+    for med_id, heals in game_log["healspread"].items():
+        heal_total += heals.get(id3, 0)
+    return heal_total
+
+
 def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
     user_classes: Dict[str, Dict] = {}
     for id3, player in game_log["players"].items():
@@ -97,28 +110,28 @@ def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
             user_entry["player_id"] = id3_to_id64[id3]
             user_entry["tf2_class"] = class_name
 
-            if class_name == "medic":
-                user_entry["drops"] = player["drops"]
-                if "medigun" in player["ubertypes"]:
-                    user_entry["ubers"] = player["ubertypes"]["medigun"]
+            user_entry["drops"] = player["drops"]
+            mfs = get_midfight_survival(id3, game_log)
+            user_entry["mids_survived"] = mfs[0]
+            user_entry["mid_deaths"] = mfs[1]
 
-                mfs = get_midfight_survival(game_log, id3)
-                if mfs:
-                    mid_escapes, mid_deaths = mfs
-                    user_entry["mid_escapes"] = mid_escapes
-                    user_entry["mid_deaths"] = mid_deaths
-            elif class_name == "sniper":
-                user_entry["headshots_hit"] = player["headshots_hit"]
-            elif class_name == "spy":
-                user_entry["backstabs"] = player["backstabs"]
-            elif class_name not in classnames:
-                continue
+            user_entry["headshots_hit"] = player["headshots_hit"]
+            user_entry["backstabs"] = player["backstabs"]
+            user_entry["ubers"] = player.get("ubertypes", {}).get("medigun", 0)
 
             user_entry["kills"] = class_stat["kills"]
             user_entry["assists"] = class_stat["assists"]
             user_entry["deaths"] = class_stat["deaths"]
             user_entry["dmg"] = class_stat["dmg"]
             user_entry["total_time"] = class_stat["total_time"]
+            user_entry["med_drops"] = get_meds_dropped(id3, game_log)
+            user_entry["heals_received"] = get_heals_received(id3, game_log)
+            for m in med_stats:
+                user_entry[m] = player.get("medicstats", {}).get(m, 0)
+
+            avg_uber_length = player.get("medicstats",
+                                         {}).get("avg_uber_length", 0)
+            user_entry["uber_length"] = avg_uber_length * player["ubers"]
 
             # logs.tf doesn't offer player class-specific breakdowns on these
             # stats, so they are estimated based on the fraction of the
@@ -141,8 +154,8 @@ def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
                               player_time)
             user_entry["heal"] = estimated_heal
 
-            estimated_dt = (player["dt"] * class_stat["total_time"] /
-                            player_time)
+            estimated_dt = round(player["dt"] * class_stat["total_time"] /
+                                 player_time)
 
             user_entry["dt"] = estimated_dt
             if id3 not in user_classes:
