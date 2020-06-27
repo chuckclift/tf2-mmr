@@ -120,13 +120,22 @@ def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
             user_entry["dmg"] = class_stat["dmg"]
             user_entry["total_time"] = class_stat["total_time"]
 
+            # logs.tf doesn't offer player class-specific breakdowns on these
+            # stats, so they are estimated based on the fraction of the
+            # playtime
+            playtime_fraction = class_stat["total_time"] / player_time
             for cn in classnames:
-                user_entry[cn + "_kills"] = game_log["classkills"].get(
-                    id3, {}).get(cn, 0)
-                user_entry[cn + "_deaths"] = game_log["classdeaths"].get(
-                    id3, {}).get(cn, 0)
-                user_entry[cn + "_assists"] = game_log["classkillassists"].get(
-                    id3, {}).get(cn, 0)
+                class_kills = game_log["classkills"].get(id3, {}).get(cn, 0)
+                class_deaths = game_log["classdeaths"].get(id3, {}).get(cn, 0)
+                class_assists = game_log["classkillassists"].get(id3, {}).get(
+                    cn, 0)
+
+                user_entry[cn + "_kills"] = round(class_kills *
+                                                  playtime_fraction)
+                user_entry[cn + "_deaths"] = round(class_deaths *
+                                                   playtime_fraction)
+                user_entry[cn + "_assists"] = round(class_assists *
+                                                    playtime_fraction)
 
             estimated_heal = (player["heal"] * class_stat["total_time"] /
                               player_time)
