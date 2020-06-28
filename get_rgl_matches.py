@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
 Parses the RGL site to get match data including league, season, team,
 and player data.
@@ -26,7 +25,6 @@ LEAGUE_TABLE_RE = re.compile(r"/Public/LeagueTable\.aspx")
 LEAGUE_ID_RE = re.compile(r"LeagueTable\.aspx.*g=([0-9]+)")
 MATCH_RE = re.compile(r"Match\.aspx\?.*m=([0-9]+)")
 RGL_DATE = re.compile("[0-9]{1,2}/[0-9]{1,2}/[0-9]{1,4}")
-
 
 Bs4Results = Optional[bs4.element.ResultSet]
 Bs4Tag = Optional[bs4.element.Tag]
@@ -83,16 +81,12 @@ def read_player_entries():  # type: () -> List[RglPlayerEntry]
             pid, joined, left, tid, rid, season, league = line.split(",")
 
             joined_timestamp = float(joined)
-            join_date = (
-                None
-                if not joined_timestamp
-                else datetime.fromtimestamp(joined_timestamp)
-            )
+            join_date = (None if not joined_timestamp else
+                         datetime.fromtimestamp(joined_timestamp))
 
             left_timestamp = float(left)
-            left_date = (
-                None if not left_timestamp else datetime.fromtimestamp(left_timestamp)
-            )
+            left_date = (None if not left_timestamp else
+                         datetime.fromtimestamp(left_timestamp))
 
             player_entries.append(
                 RglPlayerEntry(
@@ -103,8 +97,7 @@ def read_player_entries():  # type: () -> List[RglPlayerEntry]
                     int(rid),
                     int(season),
                     int(league),
-                )
-            )
+                ))
     return player_entries
 
 
@@ -142,8 +135,7 @@ def read_matches():  # type: () -> List[RglMatch]
                     int(fields[3]),  # team 2
                     team2_score,
                     csv_match_season_id,
-                )
-            )
+                ))
     return csv_matches
 
 
@@ -192,9 +184,8 @@ def row_to_player(tr):  # type: (bs4.element.Tag) -> Optional[RglPlayer]
         logging.info("No player id in " + str(tr))
         return None
 
-    player_dates = [
-        i.text.strip() for i in date_rows if not i.find("a")
-    ]  # type: List[str]
+    player_dates = [i.text.strip() for i in date_rows
+                    if not i.find("a")]  # type: List[str]
 
     player_name = player_link.text.strip()
     joined = None  # type: Optional[datetime]
@@ -210,7 +201,8 @@ def row_to_player(tr):  # type: (bs4.element.Tag) -> Optional[RglPlayer]
     return RglPlayer(player_id, player_name, joined, left)
 
 
-def row_to_match(tr, season_id):  # type: (bs4.element.Tag, int) -> Optional[RglMatch]
+def row_to_match(
+        tr, season_id):  # type: (bs4.element.Tag, int) -> Optional[RglMatch]
     """
     Extracts an RGL Match from the table row of a team page
     """
@@ -247,7 +239,8 @@ def row_to_match(tr, season_id):  # type: (bs4.element.Tag, int) -> Optional[Rgl
     team1_score = None
     team2_score = None
 
-    RGL_SCORE = re.compile(r"(-?\d{1,3}\.?\d{0,3})\s*-\s*(-?\d{1,3}\.?\d{0,3})")
+    RGL_SCORE = re.compile(
+        r"(-?\d{1,3}\.?\d{0,3})\s*-\s*(-?\d{1,3}\.?\d{0,3})")
     two_number_cells = tr.find_all("td", text=RGL_SCORE)  # type: Bs4Results
     if two_number_cells:
         # cells like the team cells, the match cell, and the map cells have links
@@ -262,10 +255,12 @@ def row_to_match(tr, season_id):  # type: (bs4.element.Tag, int) -> Optional[Rgl
     date_cells = tr.find_all("td", text=RGL_DATE)  # type: Bs4Results
 
     if date_cells:
-        match_date = [d.text for d in date_cells if not d.find("a")][0]  # type: str
+        match_date = [d.text for d in date_cells
+                      if not d.find("a")][0]  # type: str
         if match_date:
             match_date = " ".join(match_date.split()[:3])
-            match_dtime = datetime.strptime(match_date.strip(), "%m/%d/%Y %I:%M %p")
+            match_dtime = datetime.strptime(match_date.strip(),
+                                            "%m/%d/%Y %I:%M %p")
     return RglMatch(
         match_id,
         match_dtime,
@@ -280,8 +275,9 @@ def row_to_match(tr, season_id):  # type: (bs4.element.Tag, int) -> Optional[Rgl
 
 def main():
     h = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        + " (KHTML, like Gecko)"
+        "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
+        " (KHTML, like Gecko)"
     }
     r = Request("https://rgl.gg/Public/Regions.aspx", headers=h)
     response = urlopen(r).read().decode("utf-8")
@@ -299,9 +295,11 @@ def main():
         league_table = "https://rgl.gg/Public/LeagueTable.aspx?s=" + str(s)
         r = Request(league_table, headers=h)
         league_table_string = urlopen(r).read().decode("utf-8")
-        league_table_doc = bs4.BeautifulSoup(league_table_string, "html.parser")
+        league_table_doc = bs4.BeautifulSoup(league_table_string,
+                                             "html.parser")
         team_links = league_table_doc.find_all("a", href=TEAM_RE)
-        logging.info("{} team links found for {}".format(len(team_links), seasons[s]))
+        logging.info("{} team links found for {}".format(
+            len(team_links), seasons[s]))
 
         for l in team_links:
             team_id_match = re.search(TEAM_RE, l.get("href"))
@@ -329,7 +327,6 @@ def main():
     with open("rgl_seasons.csv", "w", encoding="utf-8") as f:
         for sid, name in seasons.items():
             f.write("{},{}\n".format(sid, name.replace(",", " ")))
-    return 0
 
     for tid, rid in team_regions.items():
         time.sleep(REQUEST_DELAY)
@@ -349,7 +346,8 @@ def main():
             league_names[league_id] = league_link.text.strip()
 
         player_rows = [
-            tr for tr in team_doc.find_all("tr") if tr.find("a", href=PLAYER_RE)
+            tr for tr in team_doc.find_all("tr")
+            if tr.find("a", href=PLAYER_RE)
         ]
 
         players = [row_to_player(i) for i in player_rows]
@@ -359,17 +357,15 @@ def main():
             for p in valid_players:
                 player_join_date = 0 if not p.joined else p.joined.timestamp()
                 player_leave_date = 0 if not p.left else p.left.timestamp()
-                f.write(
-                    "{},{},{},{},{},{},{}\n".format(
-                        p.id,
-                        player_join_date,
-                        player_leave_date,
-                        tid,
-                        rid,
-                        team_seasons[tid],
-                        league_id,
-                    )
-                )
+                f.write("{},{},{},{},{},{},{}\n".format(
+                    p.id,
+                    player_join_date,
+                    player_leave_date,
+                    tid,
+                    rid,
+                    team_seasons[tid],
+                    league_id,
+                ))
 
         match_rows = [
             tr for tr in team_doc.find_all("tr") if tr.find("a", href=MATCH_RE)
@@ -394,18 +390,16 @@ def main():
                 else:
                     match_season = team_seasons[m.team2]
 
-                f.write(
-                    "{},{},{},{},{},{},{},{}\n".format(
-                        m.id,
-                        m.team1,
-                        m.team1_score,
-                        m.team2,
-                        m.team2_score,
-                        date_cell,
-                        map_cell,
-                        match_season,
-                    )
-                )
+                f.write("{},{},{},{},{},{},{},{}\n".format(
+                    m.id,
+                    m.team1,
+                    m.team1_score,
+                    m.team2,
+                    m.team2_score,
+                    date_cell,
+                    map_cell,
+                    match_season,
+                ))
 
     with open("rgl_leagues.csv", "w", encoding="utf-8") as f:
         for l, n in league_names.items():

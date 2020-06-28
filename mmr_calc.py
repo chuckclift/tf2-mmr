@@ -9,7 +9,6 @@ from typing import Dict, Iterator, List, Tuple, Any
 import trueskill  # type: ignore
 from steam.steamid import SteamID  # type: ignore
 
-
 player_ratings = {}  # type: Dict[int, Any]
 
 
@@ -46,8 +45,12 @@ def main():
             if player_id not in player_ratings:
                 player_ratings[player_id] = trueskill.Rating()
 
-        red_ids = [i for i in game["players"] if game["players"][i]["team"] == "Red"]
-        blue_ids = [i for i in game["players"] if game["players"][i]["team"] == "Blue"]
+        red_ids = [
+            i for i in game["players"] if game["players"][i]["team"] == "Red"
+        ]
+        blue_ids = [
+            i for i in game["players"] if game["players"][i]["team"] == "Blue"
+        ]
 
         red_ratings = [player_ratings[i] for i in red_ids]
         blue_ratings = [player_ratings[i] for i in blue_ids]

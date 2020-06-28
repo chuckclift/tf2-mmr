@@ -23,7 +23,8 @@ def is_compmap(name):
     payload (pl), and king of the hill (koth_), are the only map types
     played competitively.
     """
-    return name.startswith("cp_") or name.startswith("pl_") or name.startswith("koth_")
+    return name.startswith("cp_") or name.startswith("pl_") or name.startswith(
+        "koth_")
 
 
 def get_game_ids():
@@ -37,7 +38,8 @@ def get_game_ids():
         id_request = request.urlopen(id_url, timeout=10)
         game_search = json.loads(id_request.read().decode("utf-8"))
         for game_log in game_search["logs"]:
-            if is_compmap(game_log["map"]) and game_log["date"] >= SEASON.timestamp():
+            if is_compmap(game_log["map"]
+                          ) and game_log["date"] >= SEASON.timestamp():
                 yield game_log["id"]
         time.sleep(SLEEP_TIME)
     except URLError as e:
@@ -58,7 +60,6 @@ else:
 
 print("found", len(downloaded_games), "games in game_logs.json")
 
-
 for gid in get_game_ids():
     if gid in downloaded_games:
         print(gid, "already downloaded")
@@ -66,9 +67,8 @@ for gid in get_game_ids():
 
     print("https://logs.tf/json/" + str(gid))
     try:
-        details_request = request.urlopen(
-            "https://logs.tf/json/" + str(gid), timeout=10
-        )
+        details_request = request.urlopen("https://logs.tf/json/" + str(gid),
+                                          timeout=10)
         game_details = json.loads(details_request.read().decode("utf-8"))
         del game_details["chat"]
         game_details["id"] = gid
@@ -78,7 +78,9 @@ for gid in get_game_ids():
 
     except URLError as e:
         print(e)
-        print("error processing https://logs.tf/json/{} sleeping 5 mins.".format(gid))
+        print(
+            "error processing https://logs.tf/json/{} sleeping 5 mins.".format(
+                gid))
         time.sleep(60 * 5)
 
     time.sleep(SLEEP_TIME)

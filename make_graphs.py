@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
 
-league_names = ["invite", "advanced", "main", "intermediate", "open", "newcomer"][::-1]
+league_names = [
+    "invite", "advanced", "main", "intermediate", "open", "newcomer"
+][::-1]
 player_leagues = {}
 with open("player_teamid_league.csv", encoding="utf-8") as f:
     for line in f:
@@ -22,18 +24,15 @@ with open("player_scores.csv", encoding="utf-8") as f:
                 print(stid, score)
             player_scores[int(stid)] = float(score)
 
-
 print("league, max, min, avg")
 boxplot_data = []
 for l in league_names:
-    scores = [player_scores[i] for i in player_scores if player_leagues[i] == l]
+    scores = [
+        player_scores[i] for i in player_scores if player_leagues[i] == l
+    ]
     boxplot_data.append(scores)
-    print(
-        "{},{:.1f},{:.1f},{:.1f}".format(
-            l, max(scores), min(scores), sum(scores) / len(scores)
-        )
-    )
-
+    print("{},{:.1f},{:.1f},{:.1f}".format(l, max(scores), min(scores),
+                                           sum(scores) / len(scores)))
 
 print(len(player_scores), "rgl players found")
 

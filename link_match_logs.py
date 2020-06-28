@@ -57,7 +57,8 @@ def get_format(gamelog):  # type: (Dict) -> Tf2Format
 
 
 matches = {}  # type: Dict[int, RglMatch]
-format_matches = {i: set() for i in Tf2Format}  # type: Dict[Tf2Format, Set[int]]
+format_matches = {i: set()
+                  for i in Tf2Format}  # type: Dict[Tf2Format, Set[int]]
 match_dates = {}  # type: Dict[date, Set[int]]
 possible_logs = {}  # type: Dict[int, Set[int]]
 roster = {}  # type: Dict[int, Set[int]]
@@ -73,16 +74,15 @@ def get_id64(id3):  # type: (str) -> int
 
 
 def team_match(
-    red, blu, team1, team2
-):  # type: (Set[int], Set[int], Set[int], Set[int]) -> bool
+        red, blu, team1,
+        team2):  # type: (Set[int], Set[int], Set[int], Set[int]) -> bool
     red_ringers = len(red - team1)
     red_ringers2 = len(red - team2)
     blu_ringers = len(blu - team1)
     blu_ringers2 = len(blu - team2)
 
-    too_many_ringers = (
-        min(red_ringers, red_ringers2) > 4 or min(blu_ringers, blu_ringers2) > 4
-    )
+    too_many_ringers = (min(red_ringers, red_ringers2) > 4
+                        or min(blu_ringers, blu_ringers2) > 4)
     return not too_many_ringers
 
 
@@ -136,20 +136,19 @@ if __name__ == "__main__":
         log_match_date = datetime.fromtimestamp(logstf["info"]["date"]).date()
         log_match_format = get_format(logstf)
 
-        matchdate_set = match_dates.get(log_match_date, set())  # type: Set[int]
+        matchdate_set = match_dates.get(log_match_date,
+                                        set())  # type: Set[int]
         map_set = get_similar_maps(logstf["info"]["map"])
 
         format_set = format_matches[log_match_format]  # type: Set[int]
         rgl_possible_match_ids = format_set & matchdate_set & map_set
 
-        rgl_possible_matches = [
-            matches[i] for i in rgl_possible_match_ids
-        ]  # type: List[RglMatch]
+        rgl_possible_matches = [matches[i] for i in rgl_possible_match_ids
+                                ]  # type: List[RglMatch]
 
         red_roster = {
             get_id64(i)
-            for i in logstf["players"]
-            if logstf["players"][i]["team"] == "Red"
+            for i in logstf["players"] if logstf["players"][i]["team"] == "Red"
         }
         blue_roster = {
             get_id64(i)
@@ -158,12 +157,12 @@ if __name__ == "__main__":
         }
 
         valid_rosters = [
-            i for i in rgl_possible_matches if i.team1 in roster and i.team2 in roster
+            i for i in rgl_possible_matches
+            if i.team1 in roster and i.team2 in roster
         ]
         valid_games = [
-            pm
-            for pm in valid_rosters
-            if team_match(red_roster, blue_roster, roster[pm.team1], roster[pm.team2])
+            pm for pm in valid_rosters if team_match(
+                red_roster, blue_roster, roster[pm.team1], roster[pm.team2])
         ]
 
         for vg in valid_games:

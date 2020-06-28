@@ -43,13 +43,11 @@ with open("player_scores.csv", encoding="utf-8") as f:
         id64, score = line.split(",")
         user_mmr[int(id64)] = float(score)
 
-
 season_teams = {}  # type: Dict[int, Set]
 season_leagues = {}  # type: Dict[int, Set]
 team_leagues = {}  # type: Dict[int, int]
 team_players = {}  # type: Dict[int, Set[int]]
 league_teams = {}  # type: Dict[int, Set[int]]
-
 
 player_entries = read_player_entries()
 for p in player_entries:
@@ -98,9 +96,8 @@ for s, team_set in season_teams.items():
             team["players"] = [i for i in players if not math.isnan(i[0])]
             league_scores += [i[0] for i in team["players"]]
             team["players"].sort(reverse=True)
-            top6_players = (
-                team["players"] if len(team["players"]) < 6 else team["players"][:6]
-            )
+            top6_players = (team["players"] if len(team["players"]) < 6 else
+                            team["players"][:6])
             team["top6"] = sum([i[0] for i in top6_players])
             league["teams"].append(team)
             league["teams"].sort(reverse=True, key=lambda x: x["top6"])
@@ -116,11 +113,9 @@ for s, team_set in season_teams.items():
 
 print(len(season_profiles), "seasons found")
 
-
 season_profiles.sort(reverse=True, key=lambda x: x["id"])
-jinja_env = jinja2.Environment(
-    loader=jinja2.FileSystemLoader("templates"), autoescape=True
-)
+jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader("templates"),
+                               autoescape=True)
 league_template = jinja_env.get_template("leagues.html")
 
 with open("html/leagues.html", "w", encoding="utf-8") as f:
