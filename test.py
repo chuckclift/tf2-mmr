@@ -7,18 +7,20 @@ from pprint import pprint
 from steam.steamid import SteamID
 from parse_logs import get_meds_dropped, get_user_class_stats
 import sql_commands
+import link_match_logs
 
 with open("test/2596216.json", encoding="utf-8") as f:
     json_doc = json.loads(f.read())
 
 stats = get_user_class_stats(json_doc)
 red_med = "[U:1:101435715]"
-
 blue_demo = "[U:1:155433728]"
+game_format = link_match_logs.get_format(json_doc)
 
 for player in stats:
     for c in stats[player]:
         stats[player][c]["log_id"] = 2596216
+        stats[player][c]["format"] = game_format.name
 
 
 class ParseTest(unittest.TestCase):
@@ -29,6 +31,7 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(stats[red_med]["medic"]["dmg"], 60)
         self.assertEqual(stats[red_med]["medic"]["dt"], 1355)
         self.assertEqual(stats[blue_demo]["demoman"]["heals_received"], 2448)
+        self.assertEqual(stats[blue_demo]["demoman"]["format"], "sixes")
 
     def testclasskills(self):
         self.assertEqual(stats[blue_demo]["demoman"]["scout_kills"], 6)
@@ -53,7 +56,6 @@ class MakeDbTest(unittest.TestCase):
                 cur.execute(sql_commands.insert_player_stats, stats[id3][cn])
 
         for row in cur.execute("select * from PlayerStats;"):
-            pc += 1
             keynames = [d[0] for d in cur.description]
             id3 = SteamID(row["player_id"]).as_steam3
             class_name = row["tf2_class"]

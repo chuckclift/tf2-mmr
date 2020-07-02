@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 from typing import Dict, Union, Tuple, Optional
-from steam.steamid import SteamID # type: ignore
+from steam.steamid import SteamID  # type: ignore
+import link_match_logs
 
 id3_to_id64: Dict[str, int] = {}
 classnames = [
@@ -53,7 +54,7 @@ def get_meds_dropped(id3: str, game_log: Dict) -> int:
     return meds_dropped
 
 
-def get_midfight_survival( med_id3: str, gamelog: Dict) -> Tuple:
+def get_midfight_survival(med_id3: str, gamelog: Dict) -> Tuple:
     """
     gets the midfight survivals and the midfight deaths from a gamelog for a
     medic player.  If the map isn't a koth or control points map, it returns
@@ -95,6 +96,7 @@ def get_heals_received(id3: str, game_log: Dict) -> int:
 
 def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
     user_classes: Dict[str, Dict] = {}
+    game_format = link_match_logs.get_format(game_log)
     for id3, player in game_log["players"].items():
         if id3 not in id3_to_id64:
             id3_to_id64[id3] = SteamID(id3).as_64
@@ -109,6 +111,7 @@ def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
             user_entry["team"] = game_log["players"][id3]["team"]
             user_entry["player_id"] = id3_to_id64[id3]
             user_entry["tf2_class"] = class_name
+            user_entry["format"] = game_format.name
 
             user_entry["drops"] = player["drops"]
             mfs = get_midfight_survival(id3, game_log)

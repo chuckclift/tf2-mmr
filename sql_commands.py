@@ -8,6 +8,7 @@ create table if not exists PlayerStats
     log_id int,
     player_id int,
     tf2_class text,
+    format text,
     kills int,
     deaths int,
     assists int,
@@ -63,11 +64,12 @@ create table if not exists PlayerStats
 );"""
 
 insert_player_stats = """
-insert into PlayerStats values
+insert or ignore into PlayerStats values
 (
 :log_id,
 :player_id,
 :tf2_class,
+:format,
 :kills,
 :deaths,
 :assists,
@@ -121,5 +123,3 @@ insert into PlayerStats values
 :heavyweapons_deaths
 );
 """
-
-
