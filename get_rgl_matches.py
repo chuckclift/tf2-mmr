@@ -29,12 +29,12 @@ RGL_DATE = re.compile("[0-9]{1,2}/[0-9]{1,2}/[0-9]{1,4}")
 Bs4Results = Optional[bs4.element.ResultSet]
 Bs4Tag = Optional[bs4.element.Tag]
 
-seasons = {}  # type: Dict[int, str]
-team_names = {}  # typing: Dict[int, str]
-team_regions = {}  # typing: Dict[int, int]
-team_seasons = {}  # typing: Dict[int, int]
-league_names = {}  # typing: Dict[int, str]
-usernames = set()  # typing: Set[Tuple[int, str]]
+seasons: Dict[int, str] = {}
+team_names:  Dict[int, str]= {}
+team_regions: Dict[int, int] = {}
+team_seasons: Dict[int, int]= {}
+league_names: Dict[int, str] = {}
+usernames: Set[Tuple[int, str]] = set()
 
 RglPlayer = NamedTuple(
     "RglPlayer",

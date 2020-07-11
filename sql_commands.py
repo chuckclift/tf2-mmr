@@ -123,3 +123,66 @@ insert or ignore into PlayerStats values
 :heavyweapons_deaths
 );
 """
+
+get_player_stats = """
+select
+player_id,
+tf2_class,
+sum(kills),
+sum(deaths),
+sum(assists),
+sum(team),
+sum(dmg),
+sum(dt),
+sum(total_time),
+sum(med_drops),
+sum(heals_received),
+sum(heal),
+sum(drops),
+sum(ubers),
+sum(deaths_with_95_99_uber),
+sum(deaths_within_20s_after_uber),
+sum(advantages_lost),
+sum(biggest_advantage_lost),
+sum(avg_time_before_healing),
+sum(avg_time_to_build),
+sum(avg_time_before_using),
+sum(uber_length),
+sum(mid_deaths),
+sum(mids_survived),
+sum(headshots_hit),
+sum(backstabs),
+sum(soldier_kills),
+sum(sniper_kills),
+sum(medic_kills),
+sum(scout_kills),
+sum(spy_kills),
+sum(pyro_kills),
+sum(engineer_kills),
+sum(demoman_kills),
+sum(heavyweapons_kills),
+sum(soldier_assists),
+sum(sniper_assists),
+sum(medic_assists),
+sum(scout_assists),
+sum(spy_assists),
+sum(pyro_assists),
+sum(engineer_assists),
+sum(demoman_assists),
+sum(heavyweapons_assists),
+sum(soldier_deaths),
+sum(sniper_deaths),
+sum(medic_deaths),
+sum(scout_deaths),
+sum(spy_deaths),
+sum(pyro_deaths),
+sum(engineer_deaths),
+sum(demoman_deaths),
+sum(heavyweapons_death),
+sum(deaths)
+from PlayerStats
+group by player_id, tf2_class;
+"""
+
+get_game_rosters = ("select log_id, team, group_concat(player_id)" +
+                    " from PlayerStats group by log_id, team;")
