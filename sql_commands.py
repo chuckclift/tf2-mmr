@@ -2,13 +2,36 @@
 
 db_file = "stats.db"
 
+class_ids = {
+    "scout":1,
+    "soldier":2,
+    "pyro":3,
+    "demoman":4,
+    "heavyweapons":5,
+    "engineer":6,
+    "medic":7,
+    "sniper":8,
+    "spy":9
+}
+
+classnames = {
+    1:"scout",
+    2:"soldier",
+    3:"pyro",
+    4:"demoman",
+    5:"heavyweapons",
+    6:"engineer",
+    7:"medic",
+    8:"sniper",
+    9:"spy"
+}
+
 create_player_stats = """
 create table if not exists PlayerStats 
 (
     log_id int,
     player_id int,
     tf2_class text,
-    format text,
     kills int,
     deaths int,
     assists int,
@@ -16,6 +39,7 @@ create table if not exists PlayerStats
     dmg int,
     dt int,
     total_time int, 
+    playtime_pct int,
     med_drops int,
     heals_received int,
     heal int,
@@ -63,13 +87,55 @@ create table if not exists PlayerStats
     primary key (log_id, player_id, tf2_class )
 );"""
 
+create_users = """
+create table if not exists Users
+(
+player_id int primary key,
+name text
+);
+"""
+
+insert_user = """
+insert or replace into users
+values
+(
+:player_id,
+:name
+);
+"""
+
+create_match_table = """
+create table if not exists MatchLogs
+(
+log_id int primary key,
+map text,
+match_time text,
+format text,
+red_score int,
+blue_score int
+);
+"""
+
+create_weapon_stats = """
+create table if not exists WeaponStats
+(
+player_id int,
+weapon_name text,
+weapon_time int,
+weapon_dmg int,
+weapon_kills int,
+primary key (player_id, weapon_name)
+);
+"""
+
+
+
 insert_player_stats = """
 insert or ignore into PlayerStats values
 (
 :log_id,
 :player_id,
 :tf2_class,
-:format,
 :kills,
 :deaths,
 :assists,
@@ -77,6 +143,7 @@ insert or ignore into PlayerStats values
 :dmg,
 :dt,
 :total_time,
+:playtime_pct,
 :med_drops,
 :heals_received,
 :heal,
@@ -184,5 +251,20 @@ from PlayerStats
 group by player_id, tf2_class;
 """
 
-get_game_rosters = ("select log_id, team, group_concat(player_id)" +
+get_game_rosters = ("select log_id, team, group_concat(player_id) as roster" +
                     " from PlayerStats group by log_id, team;")
+
+
+
+insert_match = """
+insert or ignore into MatchLogs
+values
+(
+:log_id,
+:map,
+:match_time,
+:format,
+:red_score,
+:blue_score
+);
+"""
