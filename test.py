@@ -40,6 +40,27 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(stats[blue_demo]["demoman"]["demoman_kills"], 1)
         self.assertEqual(stats[blue_demo]["demoman"]["heavyweapons_kills"], 0)
 
+    def testgetteam(self):
+        """
+        Testing assorted matches that have players with missing teams
+        """
+        with open("test/2522218.json") as f:
+            json_doc = json.loads(f.read())
+            ts = get_user_class_stats(json_doc)
+            self.assertEqual(ts["[U:1:97532411]"]["scout"]["team"], "Blue")
+            self.assertEqual(ts["[U:1:97532411]"]["spy"]["team"], "Blue")
+            self.assertEqual(ts["[U:1:97532411]"]["pyro"]["team"], "Blue")
+
+
+
+        with open("test/2521810.json") as f:
+            json_doc = json.loads(f.read())
+            ts = get_user_class_stats(json_doc)
+            self.assertEqual(ts["[U:1:131957877]"]["soldier"]["team"], "Red")
+
+
+
+
     def testdrop(self):
         self.assertEqual(2, get_meds_dropped(blue_demo, json_doc))
 

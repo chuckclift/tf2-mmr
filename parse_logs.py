@@ -6,15 +6,15 @@ import link_match_logs
 
 id3_to_id64: Dict[str, int] = {}
 classnames = [
-    "soldier",
-    "sniper",
-    "medic",
     "scout",
-    "spy",
+    "soldier",
     "pyro",
-    "engineer",
     "demoman",
     "heavyweapons",
+    "engineer",
+    "medic",
+    "sniper",
+    "spy",
 ]
 
 med_stats = [
@@ -93,6 +93,35 @@ def get_heals_received(id3: str, game_log: Dict) -> int:
         heal_total += heals.get(id3, 0)
     return heal_total
 
+def get_team(id3: str, game_log: Dict) -> str: 
+    if game_log["players"][id3]["team"]:
+        return game_log["players"][id3]["team"]
+
+    for med_id3, patients in game_log["healspread"].items():
+        if id3 in patients and game_log["players"][med_id3]["team"]:
+            return game_log["players"][med_id3]["team"]
+
+    # if there is no team name, put the player on the team 
+    # that has fewer gamer seconds.  This is sometimes wrong,
+    red = sum(
+            sum(cs["total_time"] for cs in v["class_stats"])
+            for _, v in game_log["players"].items()
+            if v["team"] == "Red"
+    )
+
+    blue = sum(
+            sum(cs["total_time"] for cs in v["class_stats"])
+            for _, v in game_log["players"].items()
+            if v["team"] == "Blue"
+    )
+
+    if red > blue:
+        return "Blue"
+    else:
+        return "Red"
+
+    
+
 
 def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
     user_classes: Dict[str, Dict] = {}
@@ -108,7 +137,7 @@ def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
             user_entry: Dict[str, Union[int, str]] = {}
 
             # user_entry["log_id"] = game_log["id"]
-            user_entry["team"] = game_log["players"][id3]["team"]
+            user_entry["team"] = get_team(id3, game_log) 
             user_entry["player_id"] = id3_to_id64[id3]
             user_entry["tf2_class"] = class_name
             user_entry["format"] = game_format.name
@@ -127,6 +156,8 @@ def get_user_class_stats(game_log: Dict) -> Dict[str, Dict]:
             user_entry["deaths"] = class_stat["deaths"]
             user_entry["dmg"] = class_stat["dmg"]
             user_entry["total_time"] = class_stat["total_time"]
+            user_entry["playtime_pct"] = int(class_stat["total_time"] /
+                                             game_log["length"] * 100)
             user_entry["med_drops"] = get_meds_dropped(id3, game_log)
             user_entry["heals_received"] = get_heals_received(id3, game_log)
             for m in med_stats:
